@@ -22,7 +22,9 @@
       v-if="activeScreen === 'Desk'"
       class="flex-1"
       :dark-mode="darkMode"
+      :current-user-full-name="currentUserFullName"
       @change-db-file="showDbSelector"
+      @logout="logout"
     />
     <DatabaseSelector
       v-if="activeScreen === 'DatabaseSelector'"
@@ -34,6 +36,13 @@
       v-if="activeScreen === 'SetupWizard'"
       @setup-complete="setupComplete"
       @setup-canceled="showDbSelector"
+    />
+    <LoginScreen
+      v-if="activeScreen === 'Login'"
+      :company-name="companyName"
+      :company-logo="loginCompanyLogo"
+      :error="loginError"
+      @login="login"
     />
 
     <!-- Render target for toasts -->
@@ -76,11 +85,16 @@ import {
 } from './utils/erpnextSync';
 import { ERPNextSyncSettings } from 'models/baseModels/ERPNextSyncSettings/ERPNextSyncSettings';
 import { ErrorLogEnum } from 'fyo/telemetry/types';
+import LoginScreen from './components/Login/LoginScreen.vue';
+import bcrypt from 'bcryptjs';
+
+const AUTH_SESSION_KEY = 'authSession';
 
 enum Screen {
   Desk = 'Desk',
   DatabaseSelector = 'DatabaseSelector',
   SetupWizard = 'SetupWizard',
+  Login = 'Login',
 }
 
 export default defineComponent({
@@ -90,6 +104,7 @@ export default defineComponent({
     SetupWizard,
     DatabaseSelector,
     WindowsTitleBar,
+    LoginScreen,
   },
   setup() {
     const keys = useKeys();
@@ -122,11 +137,21 @@ export default defineComponent({
       dbPath: '',
       companyName: '',
       darkMode: false,
+      selectedFilePath: '',
+      loginError: '',
+      currentUserFullName: '',
+      currentUserRole: '',
+      loginCompanyLogo: '',
     } as {
       activeScreen: null | Screen;
       dbPath: string;
       companyName: string;
       darkMode: boolean | undefined;
+      selectedFilePath: string;
+      loginError: string;
+      currentUserFullName: string;
+      currentUserRole: string;
+      loginCompanyLogo: string;
     };
   },
   computed: {
@@ -146,6 +171,40 @@ export default defineComponent({
     this.darkMode = darkMode;
   },
   methods: {
+    setAuthSession(filePath: string, fullName: string) {
+      localStorage.setItem(
+        AUTH_SESSION_KEY,
+        JSON.stringify({ filePath, fullName })
+      );
+    },
+    getAuthSession():
+      | {
+          filePath: string;
+          fullName: string;
+        }
+      | null {
+      const raw = localStorage.getItem(AUTH_SESSION_KEY);
+      if (!raw) {
+        return null;
+      }
+
+      try {
+        const parsed = JSON.parse(raw) as {
+          filePath?: string;
+          fullName?: string;
+        };
+        if (!parsed.filePath || typeof parsed.fullName !== 'string') {
+          return null;
+        }
+
+        return { filePath: parsed.filePath, fullName: parsed.fullName };
+      } catch {
+        return null;
+      }
+    },
+    clearAuthSession() {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+    },
     async setInitialScreen(): Promise<void> {
       const lastSelectedFilePath = fyo.config.get('lastSelectedFilePath', null);
 
@@ -177,6 +236,12 @@ export default defineComponent({
       await this.setSearcher();
       updateConfigFiles(fyo);
     },
+    setLoginScreen(filePath: string): void {
+      this.selectedFilePath = filePath;
+      this.loginError = '';
+      this.loginCompanyLogo = (fyo.singles.PrintSettings?.logo as string) ?? '';
+      this.activeScreen = Screen.Login;
+    },
     newDatabase() {
       this.activeScreen = Screen.SetupWizard;
     },
@@ -206,7 +271,9 @@ export default defineComponent({
       const filePath = await ipc.getDbDefaultPath(companyName);
       await setupInstance(filePath, setupWizardOptions, fyo);
       fyo.config.set('lastSelectedFilePath', filePath);
-      await this.setDesk(filePath);
+      this.companyName = companyName;
+      this.loginCompanyLogo = setupWizardOptions.logo ?? '';
+      this.setLoginScreen(filePath);
     },
     async showSetupWizardOrDesk(filePath: string): Promise<void> {
       const { countryCode, error, actionSymbol } = await connectToDatabase(
@@ -282,7 +349,68 @@ export default defineComponent({
         }
       }
 
-      await this.setDesk(filePath);
+      const users = await fyo.db.getAll('User', {
+        fields: ['name'],
+        limit: 1,
+      });
+      if (!users.length) {
+        await this.setDesk(filePath);
+        return;
+      }
+
+      const session = this.getAuthSession();
+      if (session?.filePath === filePath) {
+        this.currentUserFullName = session.fullName;
+        await this.setDesk(filePath);
+        return;
+      }
+
+      this.setLoginScreen(filePath);
+    },
+    async login({
+      username,
+      password,
+    }: {
+      username: string;
+      password: string;
+    }): Promise<void> {
+      const users = await fyo.db.getAll('User', {
+        fields: ['fullName', 'username', 'passwordHash', 'disabled', 'role'],
+        filters: { username },
+        limit: 1,
+      });
+      const user = users[0] as {
+        fullName?: string;
+        passwordHash?: string;
+        disabled?: boolean;
+        role?: string;
+      };
+
+      if (!user || user.disabled || !user.passwordHash) {
+        this.loginError = this.t`Invalid username or password`;
+        return;
+      }
+
+      const valid = await bcrypt.compare(password, user.passwordHash);
+      if (!valid) {
+        this.loginError = this.t`Invalid username or password`;
+        return;
+      }
+
+      this.currentUserFullName = user.fullName ?? '';
+      this.currentUserRole = user.role ?? '';
+      fyo.config.set('loggedInUserRole', this.currentUserRole);
+      this.loginError = '';
+      this.setAuthSession(this.selectedFilePath, this.currentUserFullName);
+      await this.setDesk(this.selectedFilePath);
+    },
+    logout(): void {
+      this.currentUserFullName = '';
+      this.currentUserRole = '';
+      fyo.config.set('loggedInUserRole', null);
+      this.loginError = '';
+      this.clearAuthSession();
+      this.activeScreen = Screen.Login;
     },
     async handleConnectionFailed(error: Error, actionSymbol: symbol) {
       await this.showDbSelector();
@@ -318,6 +446,12 @@ export default defineComponent({
       this.dbPath = '';
       this.searcher = null;
       this.companyName = '';
+      this.currentUserFullName = '';
+      this.currentUserRole = '';
+      this.selectedFilePath = '';
+      this.loginError = '';
+      this.loginCompanyLogo = '';
+      fyo.config.set('loggedInUserRole', null);
     },
   },
 });

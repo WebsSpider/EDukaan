@@ -1,0 +1,56 @@
+{
+  "name": "User",
+  "label": "User",
+  "isSingle": false,
+  "naming": "random",
+  "fields": [
+    {
+      "fieldname": "fullName",
+      "label": "Full Name",
+      "fieldtype": "Data",
+      "required": true,
+      "section": "Default"
+    },
+    {
+      "fieldname": "username",
+      "label": "Username",
+      "fieldtype": "Data",
+      "required": true,
+      "section": "Default"
+    },
+    {
+      "fieldname": "passwordHash",
+      "label": "Password Hash",
+      "fieldtype": "Data",
+      "hidden": true,
+      "readOnly": true,
+      "section": "Default"
+    },
+    {
+      "fieldname": "password",
+      "label": "Password",
+      "fieldtype": "Data",
+      "section": "Default"
+    },
+    {
+      "fieldname": "role",
+      "label": "Role",
+      "fieldtype": "Select",
+      "required": true,
+      "default": "User",
+      "options": [
+        { "value": "Admin", "label": "Admin" },
+        { "value": "User", "label": "User" }
+      ],
+      "section": "Default"
+    },
+    {
+      "fieldname": "disabled",
+      "label": "Disabled",
+      "fieldtype": "Check",
+      "default": false,
+      "section": "Default"
+    }
+  ],
+  "quickEditFields": ["fullName", "username", "role", "disabled"]
+}

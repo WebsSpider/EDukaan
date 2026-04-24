@@ -156,6 +156,24 @@ export class SetupWizard extends Doc {
 
   validations: ValidationMap = {
     email: validateEmail,
+    adminPassword: (value) => {
+      if (!value) {
+        return;
+      }
+
+      if ((value as string).length < 6) {
+        throw new Error('Admin password must be at least 6 characters.');
+      }
+    },
+    confirmAdminPassword: (value) => {
+      if (!value) {
+        return;
+      }
+
+      if (value !== this.adminPassword) {
+        throw new Error('Admin passwords do not match.');
+      }
+    },
   };
 
   static lists: ListsMap = {

@@ -187,6 +187,7 @@ import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
+import AutoComplete from 'src/components/Controls/AutoComplete.vue';
 import { getErrorMessage } from 'src/utils';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap } from 'src/utils/misc';
@@ -220,6 +221,7 @@ export default defineComponent({
     LinkedEntries,
     RowEditForm,
     StatusPill,
+    AutoComplete,
   },
   provide() {
     return {
@@ -254,6 +256,10 @@ export default defineComponent({
       showLinks: false,
       useFullWidth: false,
       row: null,
+      quickItem: '',
+      quickQty: 1,
+      quickRate: null,
+      itemOptions: [],
     } as {
       errors: Record<string, string>;
       activeTab: string;
@@ -262,9 +268,41 @@ export default defineComponent({
       showLinks: boolean;
       useFullWidth: boolean;
       row: null | { index: number; fieldname: string };
+      quickItem: string;
+      quickQty: number;
+      quickRate: number | null;
+      itemOptions: { name: string; itemCode?: string; barcode?: string }[];
     };
   },
   computed: {
+    canShowQuickEntry(): boolean {
+      return (
+        this.hasDoc &&
+        ['SalesInvoice', 'PurchaseInvoice'].includes(this.schemaName) &&
+        this.doc.canEdit
+      );
+    },
+    quickItemOptions(): { label: string; value: string }[] {
+      const query = this.quickItem.trim().toLowerCase();
+      const list = this.itemOptions.map((item) => ({
+        label: item.itemCode ? `${item.name} (${item.itemCode})` : item.name,
+        value: item.name,
+      }));
+      if (!query) {
+        return list;
+      }
+
+      return list.filter(({ label, value }) => {
+        const matched = this.itemOptions.find((i) => i.name === value);
+        const code = matched?.itemCode?.toLowerCase() ?? '';
+        const barcode = matched?.barcode?.toLowerCase() ?? '';
+        return (
+          label.toLowerCase().includes(query) ||
+          code.includes(query) ||
+          barcode.includes(query)
+        );
+      });
+    },
     canShowBarcode(): boolean {
       if (!this.fyo.singles.InventorySettings?.enableBarcodes) {
         return false;
@@ -396,6 +434,7 @@ export default defineComponent({
       this.activeTab = [...this.groupedFields.keys()][0];
     }
     this.isPrintable = await isPrintable(this.schemaName);
+    await this.loadItemOptions();
   },
   activated(): void {
     this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
@@ -494,6 +533,46 @@ export default defineComponent({
         this.errors[fieldname] = getErrorMessage(err, this.doc);
       }
 
+      this.updateGroupedFields();
+    },
+    async loadItemOptions() {
+      if (!['SalesInvoice', 'PurchaseInvoice'].includes(this.schemaName)) {
+        return;
+      }
+
+      this.itemOptions = (await this.fyo.db.getAll('Item', {
+        fields: ['name', 'itemCode', 'barcode'],
+      })) as { name: string; itemCode?: string; barcode?: string }[];
+    },
+    async quickAddItem() {
+      if (!this.quickItem.trim()) {
+        return;
+      }
+
+      const key = this.quickItem.trim().toLowerCase();
+      const match =
+        this.itemOptions.find((i) => i.name.toLowerCase() === key) ??
+        this.itemOptions.find((i) => i.itemCode?.toLowerCase() === key) ??
+        this.itemOptions.find((i) => i.barcode?.toLowerCase() === key);
+
+      if (!match || typeof this.doc.addItem !== 'function') {
+        return;
+      }
+
+      await this.doc.addItem(match.name);
+      const row = this.doc.items?.at(-1);
+      if (row) {
+        if (this.quickQty > 0) {
+          await row.set('quantity', this.quickQty);
+        }
+        if (typeof this.quickRate === 'number' && this.quickRate >= 0) {
+          await row.set('rate', this.fyo.pesa(this.quickRate));
+        }
+      }
+
+      this.quickItem = '';
+      this.quickQty = 1;
+      this.quickRate = null;
       this.updateGroupedFields();
     },
   },

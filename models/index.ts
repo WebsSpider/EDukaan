@@ -5,6 +5,7 @@ import { AccountingSettings } from './baseModels/AccountingSettings/AccountingSe
 import { Address } from './baseModels/Address/Address';
 import { Defaults } from './baseModels/Defaults/Defaults';
 import { Item } from './baseModels/Item/Item';
+import { User } from './baseModels/User/User';
 import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
 import { JournalEntryAccount } from './baseModels/JournalEntryAccount/JournalEntryAccount';
 import { Misc } from './baseModels/Misc';
@@ -67,6 +68,7 @@ export const models = {
   Batch,
   Defaults,
   Item,
+  User,
   ItemGroup,
   ItemEnquiry,
   JournalEntry,

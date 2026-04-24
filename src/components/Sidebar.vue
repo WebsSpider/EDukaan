@@ -107,33 +107,40 @@
       </div>
     </div>
 
-    <!-- Report Issue and DB Switcher -->
+    <!-- Utility actions -->
     <div class="window-no-drag flex flex-col gap-2 py-2 px-4">
       <button
+        v-if="currentUserFullName"
+        class="flex text-sm text-gray-600 dark:text-gray-200 gap-1 items-center"
+      >
+        <feather-icon name="user" class="h-4 w-4 flex-shrink-0" />
+        <p>{{ currentUserFullName }}</p>
+      </button>
+
+      <button
+        v-if="currentUserFullName"
         class="
           flex
           text-sm text-gray-600
-          dark:text-gray-500
+          dark:text-gray-200
           hover:text-gray-800
-          dark:hover:text-gray-400
+          dark:hover:text-white
           gap-1
           items-center
         "
-        @click="openDocumentation"
+        @click="$emit('logout')"
       >
-        <feather-icon name="help-circle" class="h-4 w-4 flex-shrink-0" />
-        <p>
-          {{ t`Help` }}
-        </p>
+        <feather-icon name="log-out" class="h-4 w-4 flex-shrink-0" />
+        <p>{{ t`Logout` }}</p>
       </button>
 
       <button
         class="
           flex
           text-sm text-gray-600
-          dark:text-gray-500
+          dark:text-gray-200
           hover:text-gray-800
-          dark:hover:text-gray-400
+          dark:hover:text-white
           gap-1
           items-center
         "
@@ -148,9 +155,9 @@
         class="
           flex
           text-sm text-gray-600
-          dark:text-gray-500
+          dark:text-gray-200
           hover:text-gray-800
-          dark:hover:text-gray-400
+          dark:hover:text-white
           gap-1
           items-center
         "
@@ -160,27 +167,9 @@
         <p>{{ t`Change DB` }}</p>
       </button>
 
-      <button
-        class="
-          flex
-          text-sm text-gray-600
-          dark:text-gray-500
-          hover:text-gray-800
-          dark:hover:text-gray-400
-          gap-1
-          items-center
-        "
-        @click="() => reportIssue()"
-      >
-        <feather-icon name="flag" class="h-4 w-4 flex-shrink-0" />
-        <p>
-          {{ t`Report Issue` }}
-        </p>
-      </button>
-
       <p
         v-if="showDevMode"
-        class="text-xs text-gray-500 select-none cursor-pointer"
+        class="text-xs text-gray-500 dark:text-gray-300 select-none cursor-pointer"
         @click="showDevMode = false"
         title="Open dev tools with Ctrl+Shift+I"
       >
@@ -195,7 +184,7 @@
         bottom-0
         end-0
         text-gray-600
-        dark:text-gray-500
+        dark:text-gray-200
         hover:bg-gray-100
         dark:hover:bg-gray-875
         rounded
@@ -214,10 +203,8 @@
   </div>
 </template>
 <script lang="ts">
-import { reportIssue } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import { languageDirectionKey, shortcutsKey } from 'src/utils/injectionKeys';
-import { docsPathRef } from 'src/utils/refs';
 import { getSidebarConfig } from 'src/utils/sidebarConfig';
 import { SidebarConfig, SidebarItem, SidebarRoot } from 'src/utils/types';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
@@ -237,8 +224,9 @@ export default defineComponent({
   },
   props: {
     darkMode: { type: Boolean, default: false },
+    currentUserFullName: { type: String, default: '' },
   },
-  emits: ['change-db-file', 'toggle-darkmode'],
+  emits: ['change-db-file', 'toggle-darkmode', 'logout'],
   setup() {
     return {
       languageDirection: inject(languageDirectionKey),
@@ -280,8 +268,6 @@ export default defineComponent({
         this.toggleSidebar();
       }
     });
-    this.shortcuts?.set(COMPONENT_NAME, ['F1'], () => this.openDocumentation());
-
     this.showDevMode = this.fyo.store.isDevelopment;
   },
   unmounted() {
@@ -289,11 +275,7 @@ export default defineComponent({
   },
   methods: {
     routeTo,
-    reportIssue,
     toggleSidebar,
-    openDocumentation() {
-      ipc.openLink('https://docs.frappe.io/' + docsPathRef.value);
-    },
     setActiveGroup() {
       const { fullPath } = this.$router.currentRoute.value;
       const fallBackGroup = this.activeGroup;

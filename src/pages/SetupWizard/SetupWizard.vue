@@ -189,6 +189,9 @@ export default defineComponent({
       await this.doc.set('fullname', 'Lin Slovenly');
       await this.doc.set('bankName', 'Max Finance');
       await this.doc.set('country', 'India');
+      await this.doc.set('adminUsername', 'admin');
+      await this.doc.set('adminPassword', 'admin123');
+      await this.doc.set('confirmAdminPassword', 'admin123');
     },
     async onValueChange(field: Field, value: DocValue) {
       if (!this.hasDoc) {

@@ -87,6 +87,27 @@
       "fieldtype": "Check",
       "hidden": true,
       "readOnly": true
+    },
+    {
+      "fieldname": "adminUsername",
+      "label": "Admin Username",
+      "fieldtype": "Data",
+      "required": true,
+      "section": "Create Admin User"
+    },
+    {
+      "fieldname": "adminPassword",
+      "label": "Admin Password",
+      "fieldtype": "Data",
+      "required": true,
+      "section": "Create Admin User"
+    },
+    {
+      "fieldname": "confirmAdminPassword",
+      "label": "Confirm Admin Password",
+      "fieldtype": "Data",
+      "required": true,
+      "section": "Create Admin User"
     }
   ],
   "quickEditFields": [

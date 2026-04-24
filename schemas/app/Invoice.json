@@ -85,21 +85,21 @@
       "label": "Set Discount Amount",
       "fieldtype": "Check",
       "default": false,
-      "hidden": true
+      "section": "Tax and Totals"
     },
     {
       "fieldname": "discountAmount",
       "label": "Discount Amount",
       "fieldtype": "Currency",
       "readOnly": false,
-      "hidden": true
+      "section": "Tax and Totals"
     },
     {
       "fieldname": "discountPercent",
       "label": "Discount Percent",
       "fieldtype": "Float",
       "readOnly": false,
-      "hidden": true
+      "section": "Tax and Totals"
     },
     {
       "fieldname": "entryCurrency",

@@ -23,6 +23,7 @@
     "@codemirror/autocomplete": "^6.4.2",
     "@codemirror/lang-vue": "^0.1.1",
     "@popperjs/core": "^2.10.2",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^9.2.2",
     "bree": "^9.2.4",
     "codemirror": "^6.0.1",

@@ -342,6 +342,12 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'settings',
           route: '/settings',
         },
+        {
+          label: t`Users`,
+          name: 'users',
+          route: '/list/User',
+          schemaName: 'User',
+        },
       ] as SidebarItem[],
     },
   ].flat();

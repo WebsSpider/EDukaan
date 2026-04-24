@@ -202,5 +202,5 @@
     "trackItem",
     "uom"
   ],
-  "keywordFields": ["name", "itemType", "for"]
+  "keywordFields": ["name", "itemCode", "barcode", "itemType", "for"]
 }

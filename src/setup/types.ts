@@ -9,4 +9,7 @@ export interface SetupWizardOptions {
   fiscalYearStart: string;
   fiscalYearEnd: string;
   chartOfAccounts: string;
+  adminUsername: string;
+  adminPassword: string;
+  confirmAdminPassword: string;
 }

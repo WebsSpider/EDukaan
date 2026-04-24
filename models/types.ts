@@ -24,6 +24,7 @@ export enum ModelNameEnum {
   ItemGroup = 'ItemGroup',
   ItemEnquiry = 'ItemEnquiry',
   UOM = 'UOM',
+  User = 'User',
   UOMConversionItem = 'UOMConversionItem',
   JournalEntry = 'JournalEntry',
   JournalEntryAccount = 'JournalEntryAccount',

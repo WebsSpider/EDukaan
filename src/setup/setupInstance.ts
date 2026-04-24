@@ -48,6 +48,7 @@ export default async function setupInstance(
   await createDefaultEntries(fyo);
   await createDefaultNumberSeries(fyo);
   await updateInventorySettings(fyo);
+  await createAdminUser(setupWizardOptions, fyo);
 
   if (fyo.isElectron) {
     const { updatePrintTemplates } = await import('src/utils/printTemplates');
@@ -380,4 +381,19 @@ async function updateInventorySettings(fyo: Fyo) {
   }
 
   await inventorySettings.sync();
+}
+
+async function createAdminUser(
+  { fullname, adminUsername, adminPassword }: SetupWizardOptions,
+  fyo: Fyo
+) {
+  await fyo.doc
+    .getNewDoc(ModelNameEnum.User, {
+      fullName: fullname,
+      username: adminUsername,
+      password: adminPassword,
+      role: 'Admin',
+      disabled: false,
+    })
+    .sync();
 }

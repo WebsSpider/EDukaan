@@ -11,6 +11,7 @@ import GetStarted from './app/GetStarted.json';
 import Invoice from './app/Invoice.json';
 import InvoiceItem from './app/InvoiceItem.json';
 import Item from './app/Item.json';
+import User from './app/User.json';
 import JournalEntry from './app/JournalEntry.json';
 import JournalEntryAccount from './app/JournalEntryAccount.json';
 import Misc from './app/Misc.json';
@@ -122,6 +123,7 @@ export const appSchemas: Schema[] | SchemaStub[] = [
   Address as Schema,
   ItemGroup as Schema,
   Item as Schema,
+  User as Schema,
   UOM as Schema,
   UOMConversionItem as Schema,
 

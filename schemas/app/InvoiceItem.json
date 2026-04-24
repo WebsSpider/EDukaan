@@ -147,8 +147,8 @@
       "readOnly": true
     }
   ],
-  "tableFields": ["item", "tax", "qty", "rate", "amount"],
-  "keywordFields": ["item", "tax"],
+  "tableFields": ["item", "qty", "rate", "itemDiscountPercent", "amount"],
+  "keywordFields": ["item"],
   "quickEditFields": [
     "item",
     "account",

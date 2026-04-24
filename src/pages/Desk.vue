@@ -16,7 +16,9 @@ import { toggleSidebar } from 'src/utils/ui';
           w-sidebar
         "
         :dark-mode="darkMode"
+        :current-user-full-name="currentUserFullName"
         @change-db-file="$emit('change-db-file')"
+        @logout="$emit('logout')"
       />
     </Transition>
 
@@ -87,8 +89,9 @@ export default defineComponent({
   },
   props: {
     darkMode: { type: Boolean, default: false },
+    currentUserFullName: { type: String, default: '' },
   },
-  emits: ['change-db-file'],
+  emits: ['change-db-file', 'logout'],
 });
 </script>
 

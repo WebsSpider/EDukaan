@@ -64,6 +64,12 @@
       "section": "Items"
     },
     {
+      "fieldname": "setDiscountAmount",
+      "fieldtype": "Check",
+      "default": true,
+      "hidden": true
+    },
+    {
       "fieldname": "stockNotTransferred",
       "label": "Stock Not Shipped",
       "fieldtype": "Float",

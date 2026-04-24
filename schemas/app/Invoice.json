@@ -89,16 +89,14 @@
     },
     {
       "fieldname": "discountAmount",
-      "label": "Discount Amount",
+      "label": "Discounted Amount",
       "fieldtype": "Currency",
-      "readOnly": false,
       "section": "Tax and Totals"
     },
     {
       "fieldname": "discountPercent",
       "label": "Discount Percent",
       "fieldtype": "Float",
-      "readOnly": false,
       "section": "Tax and Totals"
     },
     {

@@ -7,6 +7,7 @@ import {
   FiltersMap,
   FormulaMap,
   HiddenMap,
+  ReadOnlyMap,
 } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
@@ -125,6 +126,16 @@ export abstract class Invoice extends Transactional {
 
   get enableDiscounting() {
     return !!this.fyo.singles?.AccountingSettings?.enableDiscounting;
+  }
+
+  get defaultInvoiceDiscountPercent(): number | null {
+    const value = this.fyo.singles?.AccountingSettings?.defaultInvoiceDiscountPercent;
+    const parsed = Number(value);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      return null;
+    }
+
+    return parsed;
   }
 
   get isMultiCurrency() {
@@ -566,6 +577,10 @@ export abstract class Invoice extends Transactional {
       return this.fyo.pesa(0);
     }
 
+    if (this.defaultInvoiceDiscountPercent !== null) {
+      return this.getDefaultInvoiceDiscountAmount() ?? this.fyo.pesa(0);
+    }
+
     if (this.setDiscountAmount) {
       return this.discountAmount ?? this.fyo.pesa(0);
     }
@@ -580,6 +595,22 @@ export abstract class Invoice extends Transactional {
     }
 
     return totalItemAmounts.percent(this.discountPercent ?? 0);
+  }
+
+  getDefaultInvoiceDiscountAmount() {
+    if (this.defaultInvoiceDiscountPercent === null) {
+      return this.discountAmount;
+    }
+
+    let baseAmount = this.netTotal ?? this.fyo.pesa(0);
+    if (this.discountAfterTax) {
+      const totalTax = ((this.taxes ?? []) as Doc[])
+        .map((doc) => doc.amount as Money)
+        .reduce((a, b) => a.add(b.abs()), this.fyo.pesa(0));
+      baseAmount = baseAmount.add(totalTax);
+    }
+
+    return baseAmount.percent(this.defaultInvoiceDiscountPercent);
   }
   getDiscountAmount(item: InvoiceItem) {
     if (!this.enableDiscounting) {
@@ -1205,6 +1236,9 @@ export abstract class Invoice extends Transactional {
       dependsOn: ['party', 'currency'],
     },
     netTotal: { formula: () => this.getSum('items', 'amount', false) },
+    discountAmount: {
+      formula: () => this.getDefaultInvoiceDiscountAmount(),
+    },
     taxes: { formula: async () => await this.getTaxSummary() },
     grandTotal: {
       formula: async () => await this.getGrandTotal(),
@@ -1348,9 +1382,16 @@ export abstract class Invoice extends Transactional {
     },
     setDiscountAmount: () => !this.enableDiscounting,
     discountAmount: () =>
-      !(this.enableDiscounting && !!this.setDiscountAmount),
+      !(
+        this.enableDiscounting &&
+        (this.defaultInvoiceDiscountPercent !== null || !!this.setDiscountAmount)
+      ),
     discountPercent: () =>
-      !(this.enableDiscounting && !this.setDiscountAmount),
+      !(
+        this.enableDiscounting &&
+        this.defaultInvoiceDiscountPercent === null &&
+        !this.setDiscountAmount
+      ),
     discountAfterTax: () => !this.enableDiscounting,
     taxes: () => !this.taxes?.length,
     baseGrandTotal: () =>
@@ -1381,6 +1422,10 @@ export abstract class Invoice extends Transactional {
       !this.pricingRuleDetail?.length,
   };
 
+  readOnly: ReadOnlyMap = {
+    discountAmount: () => this.defaultInvoiceDiscountPercent !== null,
+  };
+
   static defaults: DefaultMap = {
     makeAutoPayment: (doc) =>
       doc instanceof Invoice && !!doc.autoPaymentAccount,
@@ -1389,6 +1434,7 @@ export abstract class Invoice extends Transactional {
       doc instanceof Invoice &&
       !!doc.autoStockTransferLocation,
     numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
+    setDiscountAmount: () => true,
     terms: (doc) => {
       const defaults = doc.fyo.singles.Defaults;
       if (doc.schemaName === ModelNameEnum.SalesInvoice) {

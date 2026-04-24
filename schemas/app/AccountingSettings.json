@@ -66,10 +66,17 @@
       "section": "Accounts"
     },
     {
+      "fieldname": "defaultInvoiceDiscountPercent",
+      "label": "Default Invoice Discount Percent",
+      "fieldtype": "Float",
+      "default": 0,
+      "section": "Accounts"
+    },
+    {
       "fieldname": "enableDiscounting",
       "label": "Enable Discount Accounting",
       "fieldtype": "Check",
-      "default": false,
+      "default": true,
       "section": "Features"
     },
     {

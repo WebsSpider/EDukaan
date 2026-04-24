@@ -15,8 +15,8 @@ const buildDirPath = path.join(root, 'dist_electron', 'build');
 const packageDirPath = path.join(root, 'dist_electron', 'bundled');
 
 const frappeBooksConfig = {
-  productName: 'Frappe Books',
-  appId: 'io.frappe.books',
+  productName: 'EDukan',
+  appId: 'io.edukan.app',
   artifactName: '${productName}-v${version}-${os}-${arch}.${ext}',
   asarUnpack: '**/*.node',
   extraResources: [

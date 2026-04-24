@@ -8,6 +8,7 @@ import {
   ValidationMap,
 } from 'fyo/model/types';
 import { validateEmail } from 'fyo/model/validationFunction';
+import { ValidationError } from 'fyo/utils/errors';
 import { InventorySettings } from 'models/inventory/InventorySettings';
 import { ModelNameEnum } from 'models/types';
 import { createDiscountAccount } from 'src/setup/setupInstance';
@@ -15,6 +16,7 @@ import { getCountryInfo } from 'utils/misc';
 
 export class AccountingSettings extends Doc {
   enableDiscounting?: boolean;
+  defaultInvoiceDiscountPercent?: number;
   enableInventory?: boolean;
   enablePriceList?: boolean;
   enableLead?: boolean;
@@ -46,6 +48,18 @@ export class AccountingSettings extends Doc {
 
   validations: ValidationMap = {
     email: validateEmail,
+    defaultInvoiceDiscountPercent: (value) => {
+      if (value === null || value === undefined || value === '') {
+        return;
+      }
+
+      const discountPercent = Number(value);
+      if (Number.isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+        throw new ValidationError(
+          'Default Invoice Discount Percent must be between 0 and 100.'
+        );
+      }
+    },
   };
 
   static lists: ListsMap = {

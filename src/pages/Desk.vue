@@ -17,7 +17,6 @@ import { toggleSidebar } from 'src/utils/ui';
         "
         :dark-mode="darkMode"
         :current-user-full-name="currentUserFullName"
-        @change-db-file="$emit('change-db-file')"
         @logout="$emit('logout')"
       />
     </Transition>
@@ -91,7 +90,7 @@ export default defineComponent({
     darkMode: { type: Boolean, default: false },
     currentUserFullName: { type: String, default: '' },
   },
-  emits: ['change-db-file', 'logout'],
+  emits: ['logout'],
 });
 </script>
 

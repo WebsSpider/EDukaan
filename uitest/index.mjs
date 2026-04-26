@@ -8,38 +8,26 @@ const root = path.join(dirname, '..');
 const appSourcePath = path.join(root, 'dist_electron', 'build', 'main.js');
 
 (async function run() {
-  const electronApp = await _electron.launch({ args: [appSourcePath] });
+  const electronApp = await _electron.launch({
+    args: [appSourcePath],
+    env: {
+      ...process.env,
+      EDUKAN_UITEST_SKIP_AUTO_DB: '1',
+    },
+  });
   const window = await electronApp.firstWindow();
   window.setDefaultTimeout(60_000);
 
   test('load app', async (t) => {
-    t.equal(await window.title(), 'Frappe Books', 'title matches');
+    t.equal(await window.title(), 'EDukan', 'title matches');
 
     await new Promise((r) => window.once('load', () => r()));
     t.ok(true, 'window has loaded');
   });
 
   test('navigate to database selector', async (t) => {
-    /**
-     * When running on local, Frappe Books will open
-     * the last selected database.
-     */
-    const changeDb = window.getByTestId('change-db');
     const createNew = window.getByTestId('create-new-file');
-
-    const changeDbPromise = changeDb
-      .waitFor({ state: 'visible' })
-      .then(() => 'change-db');
-    const createNewPromise = createNew
-      .waitFor({ state: 'visible' })
-      .then(() => 'create-new-file');
-
-    const el = await Promise.race([changeDbPromise, createNewPromise]);
-    if (el === 'change-db') {
-      await changeDb.click();
-      await createNewPromise;
-    }
-
+    await createNew.waitFor({ state: 'visible' });
     t.ok(await createNew.isVisible(), 'create new is visible');
   });
 

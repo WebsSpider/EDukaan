@@ -117,7 +117,9 @@ async function updatePrintSettings(
     logo,
     companyName,
     email,
-    displayLogo: logo ? true : false,
+    displayLogo: true,
+    displayTime: true,
+    displaytermsandconditions: true,
   });
 }
 

@@ -93,25 +93,39 @@
         v-if="hasDoc"
         class="overflow-auto custom-scroll custom-scroll-thumb1"
       >
-        <CommonFormSection
+        <div
           v-for="([n, fields], idx) in activeGroup.entries()"
           :key="n + idx"
-          ref="section"
-          class="p-4"
           :class="
             idx !== 0 && activeGroup.size > 1
               ? 'border-t dark:border-gray-800'
               : ''
           "
-          :show-title="activeGroup.size > 1 && n !== t`Default`"
-          :title="n"
-          :fields="fields"
-          :doc="doc"
-          :errors="errors"
-          @editrow="(doc: Doc) => showRowEditForm(doc)"
-          @value-change="onValueChange"
-          @row-change="updateGroupedFields"
-        />
+        >
+          <div
+            v-if="showUserModuleBulkActions(n)"
+            class="flex flex-wrap gap-2 px-4 pt-4"
+          >
+            <Button type="secondary" @click="setAllUserModules(true)">
+              {{ t`Select all` }}
+            </Button>
+            <Button type="secondary" @click="setAllUserModules(false)">
+              {{ t`Unselect all` }}
+            </Button>
+          </div>
+          <CommonFormSection
+            ref="section"
+            class="p-4"
+            :show-title="activeGroup.size > 1 && n !== t`Default`"
+            :title="n"
+            :fields="fields"
+            :doc="doc"
+            :errors="errors"
+            @editrow="(doc: Doc) => showRowEditForm(doc)"
+            @value-change="onValueChange"
+            @row-change="updateGroupedFields"
+          />
+        </div>
       </div>
 
       <!-- Tab Bar -->
@@ -207,6 +221,18 @@ import { computed, defineComponent, inject, nextTick, ref } from 'vue';
 import CommonFormSection from './CommonFormSection.vue';
 import LinkedEntries from './LinkedEntries.vue';
 import RowEditForm from './RowEditForm.vue';
+
+const USER_MODULE_ACCESS_FIELDNAMES = [
+  'canAccessGetStarted',
+  'canAccessDashboard',
+  'canAccessSales',
+  'canAccessPurchases',
+  'canAccessCommon',
+  'canAccessReports',
+  'canAccessInventory',
+  'canAccessPOS',
+  'canAccessSetup',
+] as const;
 
 export default defineComponent({
   components: {
@@ -458,6 +484,33 @@ export default defineComponent({
     this.row = null;
   },
   methods: {
+    showUserModuleBulkActions(sectionName: string): boolean {
+      return (
+        this.schemaName === ModelNameEnum.User &&
+        sectionName === 'Modules' &&
+        this.hasDoc &&
+        this.doc.canEdit
+      );
+    },
+    async setAllUserModules(enabled: boolean): Promise<void> {
+      if (!this.hasDoc || this.schemaName !== ModelNameEnum.User) {
+        return;
+      }
+
+      for (const fieldname of USER_MODULE_ACCESS_FIELDNAMES) {
+        try {
+          await this.doc.set(fieldname, enabled);
+        } catch (err) {
+          if (!(err instanceof Error)) {
+            return;
+          }
+
+          this.errors[fieldname] = getErrorMessage(err, this.doc);
+        }
+      }
+
+      this.updateGroupedFields();
+    },
     routeTo,
     async toggleWidth() {
       const value = !this.useFullWidth;

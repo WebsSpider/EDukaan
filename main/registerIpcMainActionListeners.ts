@@ -55,7 +55,7 @@ export default function registerIpcMainActionListeners(main: Main) {
         root = 'dbs';
       }
 
-      const dbsPath = path.join(root, 'Frappe Books');
+      const dbsPath = path.join(root, 'EDukan');
       const backupPath = path.join(dbsPath, 'backups');
       await fs.ensureDir(backupPath);
 
@@ -237,6 +237,7 @@ export default function registerIpcMainActionListeners(main: Main) {
       isDevelopment: main.isDevelopment,
       platform: process.platform,
       version,
+      uitestSkipAutoDb: process.env.EDUKAN_UITEST_SKIP_AUTO_DB === '1',
     };
   });
 

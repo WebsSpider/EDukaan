@@ -137,7 +137,7 @@
       "label": "Sales Invoice Print Template",
       "fieldtype": "Link",
       "target": "PrintTemplate",
-      "default": "Business - Sales Invoice",
+      "default": "Business-POS - Sales Invoice",
       "section": "Print Templates"
     },
     {

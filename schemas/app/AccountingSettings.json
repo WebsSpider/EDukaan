@@ -84,6 +84,7 @@
       "label": "Enable Inventory",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -91,6 +92,7 @@
       "label": "Enable Price List",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -98,6 +100,7 @@
       "label": "Enable Invoice Returns",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -105,6 +108,7 @@
       "label": "Enable Form Customization",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -112,6 +116,7 @@
       "label": "Enable ERPNext Sync",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -119,6 +124,7 @@
       "label": "Enable Lead",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -126,6 +132,7 @@
       "label": "Enable Pricing Rule",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -133,6 +140,7 @@
       "label": "Enable Item Enquiry",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -140,6 +148,7 @@
       "label": "Enable Loyalty Program",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -147,6 +156,7 @@
       "label": "Enable Coupon Code",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -154,6 +164,7 @@
       "label": "Enable Item Group",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
@@ -161,13 +172,14 @@
       "label": "Enable POS Without Inventory",
       "fieldtype": "Check",
       "default": false,
+      "hidden": true,
       "section": "Features"
     },
     {
       "fieldname": "enablePartialPayment",
       "label": "Enable Partial Payment",
       "fieldtype": "Check",
-      "default": false,
+      "default": true,
       "section": "Features"
     },
     {

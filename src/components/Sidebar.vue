@@ -150,23 +150,6 @@
         <p>{{ t`Shortcuts` }}</p>
       </button>
 
-      <button
-        data-testid="change-db"
-        class="
-          flex
-          text-sm text-gray-600
-          dark:text-gray-200
-          hover:text-gray-800
-          dark:hover:text-white
-          gap-1
-          items-center
-        "
-        @click="$emit('change-db-file')"
-      >
-        <feather-icon name="database" class="h-4 w-4 flex-shrink-0" />
-        <p>{{ t`Change DB` }}</p>
-      </button>
-
       <p
         v-if="showDevMode"
         class="text-xs text-gray-500 dark:text-gray-300 select-none cursor-pointer"
@@ -226,7 +209,7 @@ export default defineComponent({
     darkMode: { type: Boolean, default: false },
     currentUserFullName: { type: String, default: '' },
   },
-  emits: ['change-db-file', 'toggle-darkmode', 'logout'],
+  emits: ['toggle-darkmode', 'logout'],
   setup() {
     return {
       languageDirection: inject(languageDirectionKey),

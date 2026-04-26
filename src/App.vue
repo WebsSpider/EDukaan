@@ -23,7 +23,6 @@
       class="flex-1"
       :dark-mode="darkMode"
       :current-user-full-name="currentUserFullName"
-      @change-db-file="showDbSelector"
       @logout="logout"
     />
     <DatabaseSelector
@@ -90,6 +89,30 @@ import bcrypt from 'bcryptjs';
 
 const AUTH_SESSION_KEY = 'authSession';
 
+type UserModules = {
+  canAccessGetStarted?: boolean;
+  canAccessDashboard?: boolean;
+  canAccessSales?: boolean;
+  canAccessPurchases?: boolean;
+  canAccessCommon?: boolean;
+  canAccessReports?: boolean;
+  canAccessInventory?: boolean;
+  canAccessPOS?: boolean;
+  canAccessSetup?: boolean;
+};
+
+const MODULE_FIELD_TO_NAME: Record<keyof UserModules, string> = {
+  canAccessGetStarted: 'get-started',
+  canAccessDashboard: 'dashboard',
+  canAccessSales: 'sales',
+  canAccessPurchases: 'purchases',
+  canAccessCommon: 'common-entries',
+  canAccessReports: 'reports',
+  canAccessInventory: 'inventory',
+  canAccessPOS: 'pos',
+  canAccessSetup: 'setup',
+};
+
 enum Screen {
   Desk = 'Desk',
   DatabaseSelector = 'DatabaseSelector',
@@ -142,6 +165,7 @@ export default defineComponent({
       currentUserFullName: '',
       currentUserRole: '',
       loginCompanyLogo: '',
+      authBeforeUnloadHandler: null,
     } as {
       activeScreen: null | Screen;
       dbPath: string;
@@ -152,6 +176,7 @@ export default defineComponent({
       currentUserFullName: string;
       currentUserRole: string;
       loginCompanyLogo: string;
+      authBeforeUnloadHandler: null | (() => void);
     };
   },
   computed: {
@@ -165,22 +190,57 @@ export default defineComponent({
     },
   },
   async mounted() {
+    this.authBeforeUnloadHandler = () => {
+      this.clearAuthSession();
+    };
+    window.addEventListener('beforeunload', this.authBeforeUnloadHandler);
     await this.setInitialScreen();
     const darkMode = !!fyo.singles.SystemSettings?.darkMode;
     setDarkMode(darkMode);
     this.darkMode = darkMode;
   },
+  beforeUnmount() {
+    if (this.authBeforeUnloadHandler) {
+      window.removeEventListener('beforeunload', this.authBeforeUnloadHandler);
+    }
+  },
   methods: {
-    setAuthSession(filePath: string, fullName: string) {
+    getEnabledModules(user: UserModules, role: string): string[] {
+      if (role === 'Admin') {
+        return [
+          'get-started',
+          'dashboard',
+          'sales',
+          'purchases',
+          'common-entries',
+          'reports',
+          'inventory',
+          'pos',
+          'setup',
+        ];
+      }
+
+      return (Object.keys(MODULE_FIELD_TO_NAME) as Array<keyof UserModules>)
+        .filter((key) => !!user[key])
+        .map((key) => MODULE_FIELD_TO_NAME[key]);
+    },
+    setAuthSession(
+      filePath: string,
+      fullName: string,
+      role: string,
+      modules: string[]
+    ) {
       localStorage.setItem(
         AUTH_SESSION_KEY,
-        JSON.stringify({ filePath, fullName })
+        JSON.stringify({ filePath, fullName, role, modules })
       );
     },
     getAuthSession():
       | {
           filePath: string;
           fullName: string;
+          role: string;
+          modules: string[];
         }
       | null {
       const raw = localStorage.getItem(AUTH_SESSION_KEY);
@@ -192,12 +252,24 @@ export default defineComponent({
         const parsed = JSON.parse(raw) as {
           filePath?: string;
           fullName?: string;
+          role?: string;
+          modules?: string[];
         };
-        if (!parsed.filePath || typeof parsed.fullName !== 'string') {
+        if (
+          !parsed.filePath ||
+          typeof parsed.fullName !== 'string' ||
+          typeof parsed.role !== 'string' ||
+          !Array.isArray(parsed.modules)
+        ) {
           return null;
         }
 
-        return { filePath: parsed.filePath, fullName: parsed.fullName };
+        return {
+          filePath: parsed.filePath,
+          fullName: parsed.fullName,
+          role: parsed.role,
+          modules: parsed.modules,
+        };
       } catch {
         return null;
       }
@@ -206,6 +278,11 @@ export default defineComponent({
       localStorage.removeItem(AUTH_SESSION_KEY);
     },
     async setInitialScreen(): Promise<void> {
+      const env = await ipc.getEnv();
+      if (env.uitestSkipAutoDb) {
+        fyo.config.set('lastSelectedFilePath', null);
+      }
+
       const lastSelectedFilePath = fyo.config.get('lastSelectedFilePath', null);
 
       if (
@@ -361,6 +438,9 @@ export default defineComponent({
       const session = this.getAuthSession();
       if (session?.filePath === filePath) {
         this.currentUserFullName = session.fullName;
+        this.currentUserRole = session.role;
+        fyo.config.set('loggedInUserRole', session.role);
+        fyo.config.set('loggedInUserModules', session.modules);
         await this.setDesk(filePath);
         return;
       }
@@ -375,7 +455,22 @@ export default defineComponent({
       password: string;
     }): Promise<void> {
       const users = await fyo.db.getAll('User', {
-        fields: ['fullName', 'username', 'passwordHash', 'disabled', 'role'],
+        fields: [
+          'fullName',
+          'username',
+          'passwordHash',
+          'disabled',
+          'role',
+          'canAccessGetStarted',
+          'canAccessDashboard',
+          'canAccessSales',
+          'canAccessPurchases',
+          'canAccessCommon',
+          'canAccessReports',
+          'canAccessInventory',
+          'canAccessPOS',
+          'canAccessSetup',
+        ],
         filters: { username },
         limit: 1,
       });
@@ -384,7 +479,7 @@ export default defineComponent({
         passwordHash?: string;
         disabled?: boolean;
         role?: string;
-      };
+      } & UserModules;
 
       if (!user || user.disabled || !user.passwordHash) {
         this.loginError = this.t`Invalid username or password`;
@@ -399,15 +494,23 @@ export default defineComponent({
 
       this.currentUserFullName = user.fullName ?? '';
       this.currentUserRole = user.role ?? '';
+      const enabledModules = this.getEnabledModules(user, this.currentUserRole);
       fyo.config.set('loggedInUserRole', this.currentUserRole);
+      fyo.config.set('loggedInUserModules', enabledModules);
       this.loginError = '';
-      this.setAuthSession(this.selectedFilePath, this.currentUserFullName);
+      this.setAuthSession(
+        this.selectedFilePath,
+        this.currentUserFullName,
+        this.currentUserRole,
+        enabledModules
+      );
       await this.setDesk(this.selectedFilePath);
     },
     logout(): void {
       this.currentUserFullName = '';
       this.currentUserRole = '';
       fyo.config.set('loggedInUserRole', null);
+      fyo.config.set('loggedInUserModules', []);
       this.loginError = '';
       this.clearAuthSession();
       this.activeScreen = Screen.Login;
@@ -452,6 +555,7 @@ export default defineComponent({
       this.loginError = '';
       this.loginCompanyLogo = '';
       fyo.config.set('loggedInUserRole', null);
+      fyo.config.set('loggedInUserModules', []);
     },
   },
 });

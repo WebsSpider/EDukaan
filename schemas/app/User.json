@@ -50,7 +50,84 @@
       "fieldtype": "Check",
       "default": false,
       "section": "Default"
+    },
+    {
+      "fieldname": "canAccessGetStarted",
+      "label": "Get Started",
+      "fieldtype": "Check",
+      "default": false,
+      "section": "Modules"
+    },
+    {
+      "fieldname": "canAccessDashboard",
+      "label": "Dashboard",
+      "fieldtype": "Check",
+      "default": false,
+      "section": "Modules"
+    },
+    {
+      "fieldname": "canAccessSales",
+      "label": "Sales",
+      "fieldtype": "Check",
+      "default": true,
+      "section": "Modules"
+    },
+    {
+      "fieldname": "canAccessPurchases",
+      "label": "Purchases",
+      "fieldtype": "Check",
+      "default": true,
+      "section": "Modules"
+    },
+    {
+      "fieldname": "canAccessCommon",
+      "label": "Common",
+      "fieldtype": "Check",
+      "default": true,
+      "section": "Modules"
+    },
+    {
+      "fieldname": "canAccessReports",
+      "label": "Reports",
+      "fieldtype": "Check",
+      "default": true,
+      "section": "Modules"
+    },
+    {
+      "fieldname": "canAccessInventory",
+      "label": "Inventory",
+      "fieldtype": "Check",
+      "default": true,
+      "section": "Modules"
+    },
+    {
+      "fieldname": "canAccessPOS",
+      "label": "POS",
+      "fieldtype": "Check",
+      "default": true,
+      "section": "Modules"
+    },
+    {
+      "fieldname": "canAccessSetup",
+      "label": "Setup",
+      "fieldtype": "Check",
+      "default": false,
+      "section": "Modules"
     }
   ],
-  "quickEditFields": ["fullName", "username", "role", "disabled"]
+  "quickEditFields": [
+    "fullName",
+    "username",
+    "role",
+    "disabled",
+    "canAccessGetStarted",
+    "canAccessDashboard",
+    "canAccessSales",
+    "canAccessPurchases",
+    "canAccessCommon",
+    "canAccessReports",
+    "canAccessInventory",
+    "canAccessPOS",
+    "canAccessSetup"
+  ]
 }

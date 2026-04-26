@@ -11,6 +11,15 @@ export class User extends Doc {
   password?: string;
   role?: 'Admin' | 'User';
   disabled?: boolean;
+  canAccessGetStarted?: boolean;
+  canAccessDashboard?: boolean;
+  canAccessSales?: boolean;
+  canAccessPurchases?: boolean;
+  canAccessCommon?: boolean;
+  canAccessReports?: boolean;
+  canAccessInventory?: boolean;
+  canAccessPOS?: boolean;
+  canAccessSetup?: boolean;
 
   validations: ValidationMap = {
     password: (value: DocValue) => {
@@ -63,7 +72,18 @@ export class User extends Doc {
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'fullName', 'username', 'role', 'disabled'],
+      columns: [
+        'name',
+        'fullName',
+        'username',
+        'role',
+        'canAccessSales',
+        'canAccessPurchases',
+        'canAccessCommon',
+        'canAccessReports',
+        'canAccessSetup',
+        'disabled',
+      ],
     };
   }
 }

@@ -1,4 +1,5 @@
 import { t } from 'fyo';
+import { hasModuleAccess, type ModuleName } from 'src/utils/accessControl';
 import { routeFilters } from 'src/utils/filters';
 import { fyo } from '../initFyo';
 import { SidebarConfig, SidebarItem, SidebarRoot } from './types';
@@ -10,6 +11,10 @@ export function getSidebarConfig(): SidebarConfig {
 
 function getFilteredSidebar(sideBar: SidebarConfig): SidebarConfig {
   return sideBar.filter((root) => {
+    if (!hasAccessByModule(root.name as ModuleName)) {
+      return false;
+    }
+
     root.items = root.items?.filter((item) => {
       if (item.hidden !== undefined) {
         return !item.hidden();
@@ -24,6 +29,10 @@ function getFilteredSidebar(sideBar: SidebarConfig): SidebarConfig {
 
     return true;
   });
+}
+
+function hasAccessByModule(moduleName: ModuleName): boolean {
+  return hasModuleAccess(moduleName);
 }
 
 function getRegionalSidebar(): SidebarRoot[] {

@@ -183,6 +183,7 @@ const ipc = {
       isDevelopment: boolean;
       platform: string;
       version: string;
+      uitestSkipAutoDb: boolean;
     };
   },
 

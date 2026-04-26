@@ -113,6 +113,7 @@
       "fieldname": "displayLogo",
       "label": "Display Logo in Invoice",
       "fieldtype": "Check",
+      "default": true,
       "section": "Customizations"
     },
     {
@@ -125,6 +126,7 @@
       "fieldname": "displayTime",
       "label": "Display Time In Invoice",
       "fieldtype": "Check",
+      "default": true,
       "section": "Customizations"
     },
     {
@@ -137,6 +139,7 @@
       "fieldname": "displaytermsandconditions",
       "label": "Display Terms and Conditions",
       "fieldtype": "Check",
+      "default": true,
       "section": "Customizations"
     },
     {

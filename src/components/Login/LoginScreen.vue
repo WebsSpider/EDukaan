@@ -1,7 +1,7 @@
 <template>
   <FormContainer :show-header="false" class="items-center justify-center h-full">
     <template #body>
-      <div class="w-form p-6">
+      <div class="w-full box-border p-6">
         <h2 class="text-xl font-semibold mb-4" style="color: orangered;">
           {{ t`Login` }}
         </h2>

@@ -22,6 +22,9 @@ import registerIpcMainActionListeners from './main/registerIpcMainActionListener
 import registerIpcMainMessageListeners from './main/registerIpcMainMessageListeners';
 import registerProcessListeners from './main/registerProcessListeners';
 
+/** Must match `AUTH_SESSION_KEY` in `src/App.vue` (cleared when the window is closed, not on reload). */
+const AUTH_SESSION_STORAGE_KEY = 'authSession';
+
 export class Main {
   title = 'EDukan';
   icon: string;
@@ -29,6 +32,7 @@ export class Main {
   winURL = '';
   checkedForUpdate = false;
   mainWindow: BrowserWindow | null = null;
+  clearingAuthAndClosing = false;
 
   WIDTH = 1200;
   HEIGHT = process.platform === 'win32' ? 826 : 800;
@@ -100,6 +104,7 @@ export class Main {
       autoHideMenuBar: true,
       frame: !this.isMac,
       resizable: true,
+      show: false,
     };
 
     if (this.isDevelopment || this.isLinux) {
@@ -124,6 +129,15 @@ export class Main {
     } else {
       this.registerAppProtocol();
     }
+
+    this.mainWindow.once('ready-to-show', () => {
+      if (this.mainWindow?.isDestroyed()) {
+        return;
+      }
+
+      this.mainWindow.maximize();
+      this.mainWindow.show();
+    });
 
     await this.mainWindow.loadURL(this.winURL);
     if (this.isDevelopment && !this.isTest) {
@@ -157,6 +171,32 @@ export class Main {
     if (this.mainWindow === null) {
       return;
     }
+
+    this.mainWindow.on('close', (event) => {
+      if (this.clearingAuthAndClosing || this.mainWindow === null) {
+        return;
+      }
+
+      const win = this.mainWindow;
+      const { webContents } = win;
+      if (webContents.isDestroyed()) {
+        return;
+      }
+
+      event.preventDefault();
+      this.clearingAuthAndClosing = true;
+      const script = `localStorage.removeItem(${JSON.stringify(AUTH_SESSION_STORAGE_KEY)})`;
+
+      webContents
+        .executeJavaScript(script, true)
+        .catch(() => undefined)
+        .finally(() => {
+          this.clearingAuthAndClosing = false;
+          if (!win.isDestroyed()) {
+            win.destroy();
+          }
+        });
+    });
 
     this.mainWindow.on('closed', () => {
       this.mainWindow = null;

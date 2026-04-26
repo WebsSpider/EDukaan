@@ -165,7 +165,6 @@ export default defineComponent({
       currentUserFullName: '',
       currentUserRole: '',
       loginCompanyLogo: '',
-      authBeforeUnloadHandler: null,
     } as {
       activeScreen: null | Screen;
       dbPath: string;
@@ -176,7 +175,6 @@ export default defineComponent({
       currentUserFullName: string;
       currentUserRole: string;
       loginCompanyLogo: string;
-      authBeforeUnloadHandler: null | (() => void);
     };
   },
   computed: {
@@ -190,19 +188,10 @@ export default defineComponent({
     },
   },
   async mounted() {
-    this.authBeforeUnloadHandler = () => {
-      this.clearAuthSession();
-    };
-    window.addEventListener('beforeunload', this.authBeforeUnloadHandler);
     await this.setInitialScreen();
     const darkMode = !!fyo.singles.SystemSettings?.darkMode;
     setDarkMode(darkMode);
     this.darkMode = darkMode;
-  },
-  beforeUnmount() {
-    if (this.authBeforeUnloadHandler) {
-      window.removeEventListener('beforeunload', this.authBeforeUnloadHandler);
-    }
   },
   methods: {
     getEnabledModules(user: UserModules, role: string): string[] {

@@ -14,17 +14,7 @@
     "
     style="height: 28px"
   >
-    <img
-      v-if="companyLogo"
-      :src="companyLogo"
-      alt="Company logo"
-      class="ms-2 h-4 w-4 object-contain rounded-sm"
-    />
-    <div
-      v-else
-      class="ms-2 h-4 w-4 rounded-sm bg-gray-400 dark:bg-gray-500"
-      aria-hidden="true"
-    ></div>
+    <p class="ms-2 text-xs font-semibold tracking-wide">EDukan</p>
     <p v-if="companyName && dbPath" class="mx-auto text-sm">
       {{ companyName }} - {{ dbPath }}
     </p>

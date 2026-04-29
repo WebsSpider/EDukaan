@@ -15,6 +15,7 @@ import {
 import { Money } from 'pesa';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { Payment } from 'models/baseModels/Payment/Payment';
+import { fyo } from 'src/initFyo';
 
 export type PrintTemplateHint = {
   [key: string]: string | PrintTemplateHint | PrintTemplateHint[];
@@ -43,6 +44,7 @@ const printSettingsFields = [
   'termsAndConditions',
 ];
 const accountingSettingsFields = ['gstin', 'taxId'];
+const AUTH_SESSION_KEY = 'authSession';
 
 export async function getPrintTemplatePropValues(
   doc: Doc
@@ -119,6 +121,34 @@ export async function getPrintTemplatePropValues(
       formattedTotalDiscount(doc);
   }
   (values.doc as PrintTemplateData).showHSN = showHSN(doc);
+  if (doc instanceof Invoice) {
+    const totalTax = await doc.getTotalTax();
+    const gstSummary = await doc.getTaxSummary();
+    let totalTaxableAmount = 0;
+    const gstSummaryRows = gstSummary.map((tax) => {
+      const rate = Number(tax.rate) || 0;
+      const gstFloat = tax.amount.float;
+      const taxableFloat = rate > 0 ? gstFloat / (rate / 100) : 0;
+      totalTaxableAmount += taxableFloat;
+      return {
+        gstPercent: `${rate}%`,
+        amount: doc.fyo.format(doc.fyo.pesa(taxableFloat), ModelNameEnum.Currency),
+        gst: doc.fyo.format(tax.amount, ModelNameEnum.Currency),
+      };
+    });
+    (values.doc as PrintTemplateData).totalItems = (doc.items ?? []).length;
+    (values.doc as PrintTemplateData).totalQuantity = doc.getTotalQuantity();
+    (values.doc as PrintTemplateData).totalTax = doc.fyo.format(
+      totalTax,
+      ModelNameEnum.Currency
+    );
+    (values.doc as PrintTemplateData).gstSummaryRows = gstSummaryRows;
+    (values.doc as PrintTemplateData).totalTaxableAmount = doc.fyo.format(
+      doc.fyo.pesa(totalTaxableAmount),
+      ModelNameEnum.Currency
+    );
+  }
+  (values.doc as PrintTemplateData).operatorName = getOperatorName();
 
   (values.doc as PrintTemplateData).grandTotalInWords = getGrandTotalInWords(
     ((doc.grandTotal as Money) ?? (doc.amount as Money)).float
@@ -135,6 +165,19 @@ export async function getPrintTemplatePropValues(
   }
 
   return values;
+}
+
+function getOperatorName(): string {
+  try {
+    const raw = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) {
+      return '';
+    }
+    const parsed = JSON.parse(raw) as { fullName?: string };
+    return typeof parsed.fullName === 'string' ? parsed.fullName : '';
+  } catch {
+    return '';
+  }
 }
 async function getPaymentDetails(doc: Doc, paymentId: string[]) {
   const paymentIds = paymentId.sort();
@@ -468,7 +511,13 @@ export async function getPathAndMakePDF(
     }
   } else {
     const html = constructPrintDocument(innerHTML);
-    const success = await ipc.printDocument(html, width, height);
+    const configuredPrinter =
+      (fyo.config.get('defaultPrinter') as string | null) ?? '';
+    const deviceName =
+      configuredPrinter.trim() ||
+      ((fyo.singles.PrintSettings?.defaultPrinter as string) ?? '').trim() ||
+      undefined;
+    const success = await ipc.printDocument(html, width, height, deviceName);
     if (success) {
       showToast({ message: t`Print Successful`, type: 'success' });
     } else {

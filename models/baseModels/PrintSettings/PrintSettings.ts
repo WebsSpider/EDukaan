@@ -17,6 +17,7 @@ export class PrintSettings extends Doc {
   displaytermsandconditions?: boolean;
   termsAndConditions?: string;
   posPrintWidth?: number;
+  defaultPrinter?: string;
   amountInWords?: boolean;
   override hidden: HiddenMap = {
     termsAndConditions: () => !this.displaytermsandconditions,

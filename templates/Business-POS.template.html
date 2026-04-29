@@ -17,15 +17,17 @@
     </p>
     <!-- Company Contacts -->
     <p class="mt-1 text-base">{{ print.phone }}</p>
-    <p class="text-base">{{ print.email }}</p>
-    <p v-if="print.taxNumber" class="text-base text-center w-11/12">
-      TAX Number: {{ print.taxNumber }}
+    <p
+      v-if="print.taxNumber || print.gstin || print.taxId"
+      class="text-base text-center w-11/12"
+    >
+      Tax Number: {{ print.taxNumber || print.gstin || print.taxId }}
     </p>
   </header>
   <!-- Invoice Details -->
 
   <section class="mt-1 flex flex-col justify-between items-center">
-    <h4 class="font-semibold text-xl">Invoice</h4>
+    <h4 class="font-bold text-xl border border-black px-3 py-1">Sale Invoice</h4>
   </section>
 
   <div class="w-auto text-xs grid grid-cols-7 grid-rows-3 p-2">
@@ -35,9 +37,11 @@
     <div class="col-span-2 row-start-2 font-bold">Customer</div>
     <div class="col-start-3 row-start-2">:</div>
     <div class="col-span-4 col-start-4 row-start-2">{{ doc.party }}</div>
-    <div class="col-span-2 col-start-1 row-start-3 font-bold">Date</div>
-    <div class="col-span-2 col-start-3 row-start-3">:</div>
-    <div class="col-span-4 col-start-4 row-start-3">{{doc.date}}</div>
+      <div class="col-span-2 col-start-1 row-start-3 font-bold">Date</div>
+      <div class="col-span-2 col-start-3 row-start-3">:</div>
+      <div class="col-span-4 col-start-4 row-start-3">
+        {{ doc.date }}<span v-if="doc.time"> - {{ doc.time }}</span>
+      </div>
   </div>
 
   <!-- Items Table -->
@@ -65,9 +69,22 @@
     </section>
 
     <!-- Totaled Amounts -->
-    <section class="flex justify-between border-b border-t border-black py-1">
-      <p>Total</p>
-      <p>{{ doc.netTotal}}</p>
+    <section class="border-b border-t border-black py-1 text-xs">
+      <div class="flex py-1">
+        <!-- <div class="w-4"></div> -->
+        <div class="w-2/5">Total Items: {{ doc.totalItems }}</div>
+        <div class="w-3/12 text-right">{{ t`Total Qty` }}</div>
+        <div class="w-3/12 text-left font-medium">{{ doc.totalQuantity }}</div>
+        <div class="w-1/12"></div>
+      </div>
+      <div class="flex justify-between mt-1">
+        <p>Net Total:</p>
+        <p>{{ doc.netTotal }}</p>
+      </div>
+      <div class="flex justify-between mt-1">
+        <p>Total Amount</p>
+        <p>{{ doc.subTotal }}</p>
+      </div>
     </section>
 
     <!-- Grand Total -->
@@ -78,53 +95,63 @@
   </section>
 
   <!-- Tax Breakdown -->
-  <section v-if="doc.taxes.length" class="mx-2">
+  <section
+    v-if="doc.gstSummaryRows && doc.gstSummaryRows.length"
+    class="mx-2 mt-3 border border-black p-2"
+  >
     <p
       class="
         flex
         justify-center
         font-semibold
-        border-t border-black
         text-lg
-        mt-2
       "
     >
-      Tax Summary
+      GST Summary
     </p>
 
-    <div class="flex justify-between pl-5 text-base">
-      <p>Total Ex.Tax</p>
-      <p>{{doc.subTotal}}</p>
+    <div class="grid grid-cols-3 text-xs font-semibold border-b border-black py-1">
+      <p>GST %</p>
+      <p class="text-right">Amount</p>
+      <p class="text-right">GST</p>
     </div>
 
     <div
-      class="flex justify-between pl-5 text-base"
-      v-for="tax in doc.taxes"
-      :key="tax.name"
+      class="grid grid-cols-3 text-xs py-1"
+      v-for="(row, index) in doc.gstSummaryRows"
+      :key="index"
     >
-      <p>{{ tax.account }}</p>
-      <p>{{ tax.amount }}</p>
+      <p>{{ row.gstPercent }}</p>
+      <p class="text-right">{{ row.amount }}</p>
+      <p class="text-right">{{ row.gst }}</p>
+    </div>
+    <div
+      class="grid grid-cols-3 text-xs border-t border-black py-1 font-semibold"
+    >
+      <p>Total</p>
+      <p class="text-right">{{ doc.totalTaxableAmount }}</p>
+      <p class="text-right">{{ doc.totalTax }}</p>
     </div>
   </section>
 
-  <!-- Discounts & Payments -->
+  <!-- Payment Information -->
   <section class="mx-1 pt-2 text-sm mr-1 border-b border-black">
-    <div class="grid grid-cols-3 grid-rows-1">
-      <div>{{ t`Payment` }}</div>
-      <div class="text-right">{{ t`Tendered` }}</div>
+    <p class="font-semibold pb-1">{{ t`Payment Information` }}</p>
+    <div class="grid grid-cols-3 border-t border-black">
+      <div>{{ t`Mode` }}</div>
+      <div class="text-right">{{ t`Amount` }}</div>
       <div class="text-right">{{ t`Balance` }}</div>
     </div>
 
-    <div
-      class="w-auto grid grid-cols-3 grid-rows-1 border-t border-black text-xs"
-    >
+    <div class="w-auto grid grid-cols-3 text-xs">
       <div>{{ t`Discount` }}</div>
       <div class="text-right font-medium">
-        {{ doc.totalDiscount ? doc.totalDiscount : '00.00'}}
+        {{ doc.totalDiscount ? doc.totalDiscount : '0.00' }}
       </div>
+      <div class="text-right font-medium">-</div>
     </div>
 
-    <div v-for="(row,index) in doc.paymentDetails">
+    <div v-for="(row, index) in doc.paymentDetails" :key="index">
       <div class="w-auto grid grid-cols-3 border-black text-xs">
         <div class="row-start-2">{{ row.paymentMethod }}</div>
         <div class="row-start-2 font-medium text-right">{{ row.amount }}</div>
@@ -135,10 +162,24 @@
     </div>
   </section>
 
-  <div class="w-full mt-3 flex pb-5 flex-col justify-center items-center">
+  <!-- <div class="w-full mt-3 flex pb-5 flex-col justify-center items-center">
     <p class="pt-1 text-lg">***** Thank You Visit Again *****</p>
+  </div> -->
+
+  <div
+    v-if="print.displaytermsandconditions && print.termsAndConditions"
+    class="w-full text-xs px-2 pb-2 pt-2"
+  >
+    <p class="font-semibold">Terms and Conditions:</p>
+    <p class="whitespace-pre-line">{{ print.termsAndConditions }}</p>
   </div>
-  <div class="w-full mt-5 flex pb-5 flex-col justify-center items-center">
-    <p class="pt-1 text-xs">Developed By: Aurobotix [0323-4083843]</p>
+
+  <!-- <div v-if="doc.operatorName" class="w-full text-xs px-2 pb-2">
+    <p><strong>Operator:</strong> {{ doc.operatorName }}</p>
+  </div> -->
+
+  <div class="w-full text-xs pt-2 pb-2 text-center border-t border-black">
+    <p>Powerd By: Aurobotix | Ph: +92-3234083843</p>
+    <p class="mt-1">https://aurobotix.com | Cell: +92-3314708085</p>
   </div>
 </main>

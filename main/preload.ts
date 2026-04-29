@@ -161,14 +161,20 @@ const ipc = {
   async printDocument(
     html: string,
     width: number,
-    height: number
+    height: number,
+    deviceName?: string
   ): Promise<boolean> {
     return (await ipcRenderer.invoke(
       IPC_ACTIONS.PRINT_HTML_DOCUMENT,
       html,
       width,
-      height
+      height,
+      deviceName
     )) as boolean;
+  },
+
+  async getPrinters(): Promise<string[]> {
+    return (await ipcRenderer.invoke(IPC_ACTIONS.GET_PRINTERS)) as string[];
   },
 
   async getDbList() {

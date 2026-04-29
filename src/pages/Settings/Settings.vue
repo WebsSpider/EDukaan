@@ -176,7 +176,6 @@ import CommonFormSection from '../CommonForm/CommonFormSection.vue';
 
 const COMPONENT_NAME = 'Settings';
 const LICENSE_TAB = '__license__';
-
 export default defineComponent({
   components: { FormContainer, Button, FormHeader, CommonFormSection },
   provide() {
@@ -337,6 +336,7 @@ export default defineComponent({
     activeTab(value: string) {
       if (value === LICENSE_TAB) {
         void this.refreshLicenseStatus();
+        return;
       }
     },
   },
@@ -558,6 +558,12 @@ export default defineComponent({
 
       for (const field of fields) {
         const schemaName = field.schemaName!;
+        if (
+          schemaName === ModelNameEnum.PrintSettings &&
+          field.fieldname === 'defaultPrinter'
+        ) {
+          continue;
+        }
         if (!grouped.has(schemaName)) {
           grouped.set(schemaName, new Map());
         }

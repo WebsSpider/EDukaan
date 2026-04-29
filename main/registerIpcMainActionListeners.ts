@@ -7,9 +7,11 @@ import {
   ipcMain,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
+import { execFile } from 'node:child_process';
 import { constants } from 'fs';
 import fs from 'fs-extra';
 import path from 'path';
+import { promisify } from 'util';
 import { SelectFileOptions, SelectFileReturn } from 'utils/types';
 import databaseManager from '../backend/database/manager';
 import { emitMainProcessError } from '../backend/helpers';
@@ -37,6 +39,24 @@ import {
 } from './license/service';
 
 export default function registerIpcMainActionListeners(main: Main) {
+  const execFileAsync = promisify(execFile);
+  const getMacPrintersFromLpstat = async (): Promise<string[]> => {
+    if (process.platform !== 'darwin') {
+      return [];
+    }
+    try {
+      const { stdout } = await execFileAsync('lpstat', ['-p']);
+      return stdout
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith('printer '))
+        .map((line) => line.slice('printer '.length).split(' ')[0])
+        .filter(Boolean);
+    } catch {
+      return [];
+    }
+  };
+
   ipcMain.handle(IPC_ACTIONS.CHECK_DB_ACCESS, async (_, filePath: string) => {
     try {
       await fs.access(filePath, constants.W_OK | constants.R_OK);
@@ -141,10 +161,33 @@ export default function registerIpcMainActionListeners(main: Main) {
 
   ipcMain.handle(
     IPC_ACTIONS.PRINT_HTML_DOCUMENT,
-    async (_, html: string, width: number, height: number) => {
-      return await printHtmlDocument(html, app, width, height);
+    async (
+      _,
+      html: string,
+      width: number,
+      height: number,
+      deviceName?: string
+    ) => {
+      return await printHtmlDocument(html, app, width, height, deviceName);
     }
   );
+
+  ipcMain.handle(IPC_ACTIONS.GET_PRINTERS, async () => {
+    const electronPrinters =
+      (await main.mainWindow?.webContents.getPrintersAsync()) ?? [];
+    const names = electronPrinters
+      .slice()
+      .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
+      .map((p) => p.name);
+
+    if (names.length > 0) {
+      return names;
+    }
+
+    // Electron can occasionally return an empty list on macOS.
+    // Fall back to CUPS so users can still pick a default printer.
+    return await getMacPrintersFromLpstat();
+  });
 
   ipcMain.handle(
     IPC_ACTIONS.SAVE_DATA,

@@ -156,6 +156,13 @@
       "section": "Customizations"
     },
     {
+      "fieldname": "defaultPrinter",
+      "label": "Default Printer",
+      "fieldtype": "Select",
+      "options": [],
+      "section": "Customizations"
+    },
+    {
       "fieldname": "termsAndConditions",
       "label": "Terms and Conditions",
       "fieldtype": "Text",

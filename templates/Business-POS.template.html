@@ -18,6 +18,9 @@
     <!-- Company Contacts -->
     <p class="mt-1 text-base">{{ print.phone }}</p>
     <p class="text-base">{{ print.email }}</p>
+    <p v-if="print.taxNumber" class="text-base text-center w-11/12">
+      TAX Number: {{ print.taxNumber }}
+    </p>
   </header>
   <!-- Invoice Details -->
 
@@ -136,6 +139,6 @@
     <p class="pt-1 text-lg">***** Thank You Visit Again *****</p>
   </div>
   <div class="w-full mt-5 flex pb-5 flex-col justify-center items-center">
-    <p class="pt-1 text-xs">Developed By: Vartist [0323-4083843]</p>
+    <p class="pt-1 text-xs">Developed By: Aurobotix [0323-4083843]</p>
   </div>
 </main>

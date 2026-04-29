@@ -40,10 +40,84 @@
           @value-change="onValueChange"
         />
       </div>
+      <div
+        v-else-if="activeTab === LICENSE_TAB"
+        class="overflow-auto custom-scroll custom-scroll-thumb1 p-4 space-y-4"
+      >
+        <div
+          v-if="licenseStatusMessage"
+          class="
+            text-sm text-red-700
+            dark:text-red-300
+            bg-red-50
+            dark:bg-red-900/30
+            border border-red-300
+            dark:border-red-800
+            rounded
+            p-3
+          "
+        >
+          {{ licenseStatusMessage }}
+        </div>
+
+        <div class="rounded border border-gray-200 dark:border-gray-700 p-4">
+          <p class="text-sm text-gray-700 dark:text-gray-200 mb-1">
+            {{ t`Current license mode` }}:
+            <strong>{{ licenseModeLabel }}</strong>
+          </p>
+          <p class="text-sm text-gray-700 dark:text-gray-200">
+            {{ t`Expiry timestamp` }}:
+            <strong>{{ licenseExpiryLabel }}</strong>
+          </p>
+        </div>
+
+        <div class="rounded border border-gray-200 dark:border-gray-700 p-4">
+          <p class="text-sm font-medium text-gray-800 dark:text-gray-100 mb-3">
+            {{ t`Activate via key (Internet is required)` }}
+          </p>
+          <input
+            v-model="licenseKey"
+            type="text"
+            class="
+              w-full
+              p-2
+              border
+              rounded
+              bg-white
+              text-gray-900
+              border-gray-300
+              dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600
+            "
+            :placeholder="t`Enter your license key`"
+            @keydown.enter="activateViaKey"
+          />
+          <Button
+            type="primary"
+            class="mt-3"
+            :disabled="licenseSubmitting"
+            @click="activateViaKey"
+          >
+            {{ t`Activate License Key` }}
+          </Button>
+        </div>
+
+        <div class="rounded border border-gray-200 dark:border-gray-700 p-4">
+          <p class="text-sm font-medium text-gray-800 dark:text-gray-100 mb-3">
+            {{ t`Activate via signed license file (Offline)` }}
+          </p>
+          <Button
+            type="secondary"
+            :disabled="licenseSubmitting"
+            @click="activateViaFile"
+          >
+            {{ t`Upload License File` }}
+          </Button>
+        </div>
+      </div>
 
       <!-- Tab Bar -->
       <div
-        v-if="groupedFields && groupedFields.size > 1"
+        v-if="settingsTabKeys.length > 1"
         class="
           mt-auto
           px-4
@@ -60,7 +134,7 @@
         "
       >
         <div
-          v-for="key of groupedFields.keys()"
+          v-for="key of settingsTabKeys"
           :key="key"
           class="text-sm cursor-pointer"
           :class="
@@ -97,9 +171,11 @@ import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { UIGroupedFields } from 'src/utils/types';
 import { computed, defineComponent, inject } from 'vue';
+import type { LicenseGetStatusResult } from 'utils/license/types';
 import CommonFormSection from '../CommonForm/CommonFormSection.vue';
 
 const COMPONENT_NAME = 'Settings';
+const LICENSE_TAB = '__license__';
 
 export default defineComponent({
   components: { FormContainer, Button, FormHeader, CommonFormSection },
@@ -116,14 +192,30 @@ export default defineComponent({
       errors: {},
       activeTab: ModelNameEnum.AccountingSettings,
       groupedFields: null,
+      licenseKey: '',
+      licenseSubmitting: false,
+      licenseStatusMessage: '',
+      licenseExpiryLabel: '-',
+      licenseModeLabel: '-',
     } as {
       errors: Record<string, string>;
       activeTab: string;
       groupedFields: null | UIGroupedFields;
+      licenseKey: string;
+      licenseSubmitting: boolean;
+      licenseStatusMessage: string;
+      licenseExpiryLabel: string;
+      licenseModeLabel: string;
     };
   },
   computed: {
+    LICENSE_TAB() {
+      return LICENSE_TAB;
+    },
     canSave() {
+      if (this.activeTab === LICENSE_TAB) {
+        return false;
+      }
       return [
         ModelNameEnum.AccountingSettings,
         ModelNameEnum.InventorySettings,
@@ -151,6 +243,7 @@ export default defineComponent({
         [ModelNameEnum.POSSettings]: this.t`POS Settings`,
         [ModelNameEnum.ERPNextSyncSettings]: this.t`ERPNext Sync`,
         [ModelNameEnum.SystemSettings]: this.t`System`,
+        [LICENSE_TAB]: this.t`License`,
       };
     },
     schemas(): Schema[] {
@@ -184,7 +277,46 @@ export default defineComponent({
 
           return true;
         })
-        .map((s) => this.fyo.schemaMap[s]!);
+        .map((s) => this.fyo.schemaMap[s])
+        .filter((s): s is Schema => !!s);
+    },
+    settingsTabKeys(): string[] {
+      const enableInventory =
+        !!this.fyo.singles.AccountingSettings?.enableInventory;
+      const enablePOS =
+        !!this.fyo.singles.InventorySettings?.enablePointOfSale;
+      const enableERPNextSync =
+        !!this.fyo.singles.AccountingSettings?.enableERPNextSync;
+
+      const keys = [
+        ModelNameEnum.AccountingSettings,
+        ModelNameEnum.InventorySettings,
+        ModelNameEnum.Defaults,
+        ModelNameEnum.POSSettings,
+        ModelNameEnum.ERPNextSyncSettings,
+        ModelNameEnum.PrintSettings,
+        ModelNameEnum.SystemSettings,
+        LICENSE_TAB,
+      ];
+
+      return keys.filter((s) => {
+        if (s === LICENSE_TAB) {
+          return true;
+        }
+        if (s === ModelNameEnum.InventorySettings && !enableInventory) {
+          return false;
+        }
+
+        if (s === ModelNameEnum.POSSettings && !enablePOS) {
+          return false;
+        }
+
+        if (s === ModelNameEnum.ERPNextSyncSettings && !enableERPNextSync) {
+          return false;
+        }
+
+        return true;
+      });
     },
     activeGroup(): Map<string, Field[]> {
       if (!this.groupedFields) {
@@ -199,6 +331,13 @@ export default defineComponent({
       }
 
       return group;
+    },
+  },
+  watch: {
+    activeTab(value: string) {
+      if (value === LICENSE_TAB) {
+        void this.refreshLicenseStatus();
+      }
     },
   },
   mounted() {
@@ -233,6 +372,117 @@ export default defineComponent({
     await this.reset();
   },
   methods: {
+    decodeLicenseJson(raw: unknown): string | null {
+      const enc = new TextDecoder('utf-8');
+      const enc16 = new TextDecoder('utf-16le');
+      const toBytes = (input: unknown): Uint8Array | null => {
+        if (input instanceof Uint8Array) {
+          return input;
+        }
+        if (typeof input === 'string') {
+          return new TextEncoder().encode(input);
+        }
+        if (
+          input &&
+          typeof input === 'object' &&
+          'type' in input &&
+          'data' in input &&
+          (input as { type?: unknown }).type === 'Buffer' &&
+          Array.isArray((input as { data?: unknown }).data)
+        ) {
+          return Uint8Array.from((input as { data: number[] }).data);
+        }
+        return null;
+      };
+      const bytes = toBytes(raw);
+      if (!bytes) {
+        return null;
+      }
+      const attempts = [
+        enc.decode(bytes),
+        enc16.decode(bytes),
+        enc.decode(bytes).replace(/\u0000/g, ''),
+      ];
+      for (const attempt of attempts) {
+        const normalized = attempt.replace(/^\uFEFF/, '').trim();
+        if (!normalized) {
+          continue;
+        }
+        try {
+          JSON.parse(normalized);
+          return normalized;
+        } catch {
+          // Try next decoding fallback.
+        }
+      }
+      return null;
+    },
+    async refreshLicenseStatus(): Promise<void> {
+      const status: LicenseGetStatusResult = await ipc.license.getStatus();
+      this.licenseStatusMessage = status.licenseServerMessage ?? '';
+      this.licenseModeLabel =
+        status.mode === 'trial'
+          ? this.t`Trial`
+          : status.mode === 'licensed'
+          ? this.t`Licensed`
+          : this.t`Not activated`;
+      this.licenseExpiryLabel = status.licenseExpiryAtIso
+        ? new Date(status.licenseExpiryAtIso).toLocaleString()
+        : this.t`Not available`;
+    },
+    async activateViaKey(): Promise<void> {
+      const key = this.licenseKey.trim();
+      if (key.length < 4) {
+        this.licenseStatusMessage = this.t`Please enter a valid license key.`;
+        return;
+      }
+      this.licenseSubmitting = true;
+      this.licenseStatusMessage = '';
+      try {
+        const companyName = (this.fyo.singles.AccountingSettings?.companyName ??
+          '') as string;
+        const result = await ipc.license.submitLicenseKey(key, companyName);
+        if (!result.success) {
+          this.licenseStatusMessage = result.error;
+          return;
+        }
+        this.licenseStatusMessage = this.t`License activated successfully.`;
+        this.licenseKey = '';
+        await this.refreshLicenseStatus();
+        window.dispatchEvent(new Event('edukan:license-updated'));
+      } finally {
+        this.licenseSubmitting = false;
+      }
+    },
+    async activateViaFile(): Promise<void> {
+      this.licenseSubmitting = true;
+      this.licenseStatusMessage = '';
+      try {
+        const selected = await ipc.selectFile({
+          title: this.t`Select license file`,
+          filters: [{ name: 'JSON', extensions: ['json'] }],
+        });
+        if (selected.canceled || !selected.success) {
+          return;
+        }
+        const rawJson = this.decodeLicenseJson(selected.data);
+        if (!rawJson) {
+          this.licenseStatusMessage = this.t`Invalid JSON file.`;
+          return;
+        }
+        const result = await ipc.license.installJson(rawJson);
+        if (!result.success) {
+          this.licenseStatusMessage = result.error;
+          return;
+        }
+        this.licenseStatusMessage = this
+          .t`License file activated successfully.`;
+        await this.refreshLicenseStatus();
+        window.dispatchEvent(new Event('edukan:license-updated'));
+      } finally {
+        this.licenseSubmitting = false;
+      }
+    },
     async reset() {
       const resetableDocs = this.schemas
         .map(({ name }) => this.fyo.singles[name])
@@ -298,6 +548,9 @@ export default defineComponent({
     },
     update(): void {
       this.updateGroupedFields();
+      if (this.activeTab === LICENSE_TAB) {
+        void this.refreshLicenseStatus();
+      }
     },
     updateGroupedFields(): void {
       const grouped: UIGroupedFields = new Map();
@@ -327,6 +580,7 @@ export default defineComponent({
         tabbed.get(section)!.push(field);
       }
 
+      grouped.set(LICENSE_TAB, new Map());
       this.groupedFields = grouped;
     },
   },

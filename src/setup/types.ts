@@ -4,6 +4,8 @@ export interface SetupWizardOptions {
   country: string;
   fullname: string;
   email: string;
+  phone: string;
+  companyAddress: string;
   bankName: string;
   currency: string;
   fiscalYearStart: string;

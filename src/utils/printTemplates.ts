@@ -37,6 +37,7 @@ const printSettingsFields = [
   'phone',
   'address',
   'companyName',
+  'taxNumber',
   'amountInWords',
   'displaytermsandconditions',
   'termsAndConditions',

@@ -37,6 +37,27 @@
         </h6>
       </div>
 
+      <div
+        v-if="showLicenseExpiryWarning"
+        class="mx-4 mb-4 min-w-0 rounded border border-red-300 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950/30"
+      >
+        <p
+          class="text-xs font-semibold text-red-800 dark:text-red-300 break-words whitespace-normal"
+        >
+          <span class="block">{{ expiryWarningLabel }}:</span>
+          <span class="block font-mono font-normal mt-0.5">{{
+            licenseExpiryLabel
+          }}</span>
+        </p>
+        <Button
+          type="secondary"
+          class="mt-2 w-full text-red-800 dark:text-red-300"
+          @click="openLicenseSettings"
+        >
+          {{ t`Activate Now` }}
+        </Button>
+      </div>
+
       <!-- Sidebar Items -->
       <div v-for="group in groups" :key="group.label">
         <div
@@ -193,6 +214,7 @@ import { SidebarConfig, SidebarItem, SidebarRoot } from 'src/utils/types';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
 import { defineComponent, inject } from 'vue';
 import router from '../router';
+import Button from './Button.vue';
 import Icon from './Icon.vue';
 import Modal from './Modal.vue';
 import ShortcutsHelper from './ShortcutsHelper.vue';
@@ -201,6 +223,7 @@ const COMPONENT_NAME = 'Sidebar';
 
 export default defineComponent({
   components: {
+    Button,
     Icon,
     Modal,
     ShortcutsHelper,
@@ -223,12 +246,18 @@ export default defineComponent({
       viewShortcuts: false,
       activeGroup: null,
       showDevMode: false,
+      licenseExpiryLabel: '',
+      showLicenseExpiryWarning: false,
+      expiryWarningLabel: '',
     } as {
       companyName: string;
       groups: SidebarConfig;
       viewShortcuts: boolean;
       activeGroup: null | SidebarRoot;
       showDevMode: boolean;
+      licenseExpiryLabel: string;
+      showLicenseExpiryWarning: boolean;
+      expiryWarningLabel: string;
     };
   },
   computed: {
@@ -252,13 +281,51 @@ export default defineComponent({
       }
     });
     this.showDevMode = this.fyo.store.isDevelopment;
+    await this.refreshLicenseWarning();
+    window.addEventListener('edukan:license-updated', this.onLicenseUpdated);
   },
   unmounted() {
     this.shortcuts?.delete(COMPONENT_NAME);
+    window.removeEventListener('edukan:license-updated', this.onLicenseUpdated);
   },
   methods: {
     routeTo,
     toggleSidebar,
+    onLicenseUpdated() {
+      void this.refreshLicenseWarning();
+    },
+    async refreshLicenseWarning() {
+      const status = await ipc.license.getStatus();
+      const expiryIso = status.licenseExpiryAtIso;
+      if (!expiryIso) {
+        this.showLicenseExpiryWarning = false;
+        this.expiryWarningLabel = '';
+        return;
+      }
+
+      const expiryTime = new Date(expiryIso).getTime();
+      if (!Number.isFinite(expiryTime)) {
+        this.showLicenseExpiryWarning = false;
+        this.expiryWarningLabel = '';
+        return;
+      }
+
+      const daysLeft = Math.ceil(
+        (expiryTime - Date.now()) / (1000 * 60 * 60 * 24)
+      );
+      this.showLicenseExpiryWarning = daysLeft > 0 && daysLeft <= 30;
+      this.expiryWarningLabel =
+        status.mode === 'licensed'
+          ? this.t`License Expiring At`
+          : this.t`Trial Expiring At`;
+      this.licenseExpiryLabel = new Date(expiryIso).toLocaleString();
+    },
+    openLicenseSettings() {
+      void this.$router.push({
+        path: '/settings',
+        query: { tab: '__license__' },
+      });
+    },
     setActiveGroup() {
       const { fullPath } = this.$router.currentRoute.value;
       const fallBackGroup = this.activeGroup;

@@ -52,7 +52,7 @@ test('check setup Singles', async (t) => {
 });
 
 test('check null singles', async (t) => {
-  const nullFields = ['gstin', 'logo', 'phone', 'address'];
+  const nullFields = ['gstin', 'logo'];
   const nullSingles = await fyo.db.getSingleValues(...nullFields);
 
   t.equal(

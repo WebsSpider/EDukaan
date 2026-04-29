@@ -81,6 +81,12 @@
       >
         GSTIN: {{ print.gstin }}
       </p>
+      <p
+        v-if="print.taxNumber"
+        class="mt-2 ml-8 text-black leading-relaxed text-lg"
+      >
+        TAX Number: {{ print.taxNumber }}
+      </p>
     </section>
   </section>
 

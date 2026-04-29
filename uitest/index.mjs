@@ -13,6 +13,7 @@ const appSourcePath = path.join(root, 'dist_electron', 'build', 'main.js');
     env: {
       ...process.env,
       EDUKAN_UITEST_SKIP_AUTO_DB: '1',
+      EDUKAN_UITEST_SKIP_LICENSE: '1',
     },
   });
   const window = await electronApp.firstWindow();

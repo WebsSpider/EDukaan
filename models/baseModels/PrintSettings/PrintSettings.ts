@@ -8,6 +8,7 @@ export class PrintSettings extends Doc {
   phone?: string;
   address?: string;
   companyName?: string;
+  taxNumber?: string;
   color?: string;
   font?: string;
   displayLogo?: boolean;

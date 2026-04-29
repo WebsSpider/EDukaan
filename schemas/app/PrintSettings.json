@@ -16,6 +16,12 @@
       "section": "Default"
     },
     {
+      "fieldname": "taxNumber",
+      "label": "TAX Number",
+      "fieldtype": "Data",
+      "section": "Default"
+    },
+    {
       "fieldname": "email",
       "label": "Email",
       "fieldtype": "Data",

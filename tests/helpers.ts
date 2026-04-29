@@ -16,6 +16,8 @@ export function getTestSetupWizardOptions(): SetupWizardOptions {
     country: 'India',
     fullname: 'Test Person',
     email: 'test@testmyfantasy.com',
+    phone: '+91 0000000000',
+    companyAddress: '123 Test Street, Test City',
     bankName: 'Test Bank of Scriptia',
     currency: 'INR',
     fiscalYearStart: DateTime.fromJSDate(
@@ -25,6 +27,9 @@ export function getTestSetupWizardOptions(): SetupWizardOptions {
       getFiscalYear('04-01', false)!
     ).toISODate(),
     chartOfAccounts: 'India - Chart of Accounts',
+    adminUsername: 'admin',
+    adminPassword: 'admin123',
+    confirmAdminPassword: 'admin123',
   };
 }
 

@@ -18,6 +18,12 @@ import type {
   SelectFileReturn,
   TemplateFile,
 } from 'utils/types';
+import type {
+  LicenseGetStatusResult,
+  LicenseInstallJsonResult,
+  LicenseStartTrialResult,
+  LicenseSubmitKeyResult,
+} from 'utils/license/types';
 
 type IPCRendererListener = Parameters<typeof ipcRenderer.on>[1];
 const ipc = {
@@ -184,7 +190,38 @@ const ipc = {
       platform: string;
       version: string;
       uitestSkipAutoDb: boolean;
+      uitestSkipLicenseOnboarding: boolean;
     };
+  },
+
+  license: {
+    async getStatus(): Promise<LicenseGetStatusResult> {
+      return (await ipcRenderer.invoke(
+        IPC_ACTIONS.LICENSE_GET_STATUS
+      )) as LicenseGetStatusResult;
+    },
+    async startTrial(companyName: string): Promise<LicenseStartTrialResult> {
+      return (await ipcRenderer.invoke(
+        IPC_ACTIONS.LICENSE_START_TRIAL,
+        companyName
+      )) as LicenseStartTrialResult;
+    },
+    async submitLicenseKey(
+      key: string,
+      companyName: string
+    ): Promise<LicenseSubmitKeyResult> {
+      return (await ipcRenderer.invoke(
+        IPC_ACTIONS.LICENSE_SUBMIT_KEY,
+        key,
+        companyName
+      )) as LicenseSubmitKeyResult;
+    },
+    async installJson(rawJson: string): Promise<LicenseInstallJsonResult> {
+      return (await ipcRenderer.invoke(
+        IPC_ACTIONS.LICENSE_INSTALL_JSON,
+        rawJson
+      )) as LicenseInstallJsonResult;
+    },
   },
 
   openExternalUrl(url: string) {

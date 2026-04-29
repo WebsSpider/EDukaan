@@ -42,6 +42,11 @@ export enum IPC_ACTIONS {
   DB_CALL = 'db-call',
   DB_BESPOKE = 'db-bespoke',
   DB_SCHEMA = 'db-schema',
+  /** Per-machine license / trial (main process, userData) */
+  LICENSE_GET_STATUS = 'license-get-status',
+  LICENSE_START_TRIAL = 'license-start-trial',
+  LICENSE_SUBMIT_KEY = 'license-submit-key',
+  LICENSE_INSTALL_JSON = 'license-install-json',
 }
 
 // ipcMain.send(...)

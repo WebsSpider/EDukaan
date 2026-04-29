@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "edukan-dash",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-29",
+  "observability": { "enabled": true },
+  "kv_namespaces": [
+    {
+      "binding": "LICENSES",
+      "id": "073d1e3e5ff44573a3172b573ce90d77",
+      "remote": true
+    },
+    {
+      "binding": "ACTIVATIONS",
+      "id": "cd46833ed35c453aa1cd11bd896ff6cd",
+      "remote": true
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "edukan-dash.aurobotix.com/*",
+      "zone_name": "aurobotix.com"
+    }
+  ]
+}

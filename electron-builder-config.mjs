@@ -23,6 +23,7 @@ const frappeBooksConfig = {
     { from: 'log_creds.txt', to: '../creds/log_creds.txt' },
     { from: 'translations', to: '../translations' },
     { from: 'templates', to: '../templates' },
+    { from: 'public_key.pem', to: 'public_key.pem' },
   ],
   files: '**',
   extends: null,
@@ -46,7 +47,7 @@ const frappeBooksConfig = {
     publish: ['github'],
   },
   win: {
-    publisherName: 'Frappe Technologies Pvt. Ltd.',
+    publisherName: 'Aurobotix',
     artifactName: '${productName}-v${version}-windows-${arch}.${ext}',
     signDlls: true,
     icon: 'build/icon.ico',

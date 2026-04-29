@@ -186,6 +186,8 @@ export default defineComponent({
 
       await this.doc.set('companyName', "Lin's Things");
       await this.doc.set('email', 'lin@lthings.com');
+      await this.doc.set('phone', '+91 9000000000');
+      await this.doc.set('companyAddress', '1 Test Street, Test City');
       await this.doc.set('fullname', 'Lin Slovenly');
       await this.doc.set('bankName', 'Max Finance');
       await this.doc.set('country', 'India');

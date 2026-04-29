@@ -29,6 +29,12 @@ import {
 import { saveHtmlAsPdf } from './saveHtmlAsPdf';
 import { sendAPIRequest } from './api';
 import { initScheduler } from './initSheduler';
+import {
+  getLicenseStatus,
+  installLicenseFromJsonInternal,
+  startTrialInternal,
+  submitLicenseKeyInternal,
+} from './license/service';
 
 export default function registerIpcMainActionListeners(main: Main) {
   ipcMain.handle(IPC_ACTIONS.CHECK_DB_ACCESS, async (_, filePath: string) => {
@@ -238,7 +244,38 @@ export default function registerIpcMainActionListeners(main: Main) {
       platform: process.platform,
       version,
       uitestSkipAutoDb: process.env.EDUKAN_UITEST_SKIP_AUTO_DB === '1',
+      uitestSkipLicenseOnboarding:
+        process.env.EDUKAN_UITEST_SKIP_LICENSE === '1',
     };
+  });
+
+  ipcMain.handle(IPC_ACTIONS.LICENSE_GET_STATUS, async () => {
+    return await getLicenseStatus();
+  });
+
+  ipcMain.handle(
+    IPC_ACTIONS.LICENSE_START_TRIAL,
+    async (_, companyName: string) => {
+      return await startTrialInternal(
+        typeof companyName === 'string' ? companyName : ''
+      );
+    }
+  );
+
+  ipcMain.handle(
+    IPC_ACTIONS.LICENSE_SUBMIT_KEY,
+    async (_, key: string, companyName: string) => {
+      return await submitLicenseKeyInternal(
+        typeof key === 'string' ? key : '',
+        typeof companyName === 'string' ? companyName : ''
+      );
+    }
+  );
+
+  ipcMain.handle(IPC_ACTIONS.LICENSE_INSTALL_JSON, async (_, rawJson: string) => {
+    return await installLicenseFromJsonInternal(
+      typeof rawJson === 'string' ? rawJson : ''
+    );
   });
 
   ipcMain.handle(

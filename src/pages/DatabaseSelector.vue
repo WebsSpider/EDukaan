@@ -25,9 +25,7 @@
           {{ t`Welcome to EDukan` }}
         </h1>
         <p class="text-gray-600 dark:text-gray-400 text-base select-none">
-          {{
-            t`Create a new company or select an existing one from your computer`
-          }}
+          {{ t`Create your company to get started on this machine` }}
         </p>
       </div>
 
@@ -60,9 +58,18 @@
           </p>
         </div>
       </div>
+      <p
+        v-if="files?.length"
+        class="px-4 py-3 text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 border-y border-amber-200 dark:border-amber-800"
+      >
+        {{
+          t`Only one company is allowed per machine. This machine already has a company configured.`
+        }}
+      </p>
 
       <!-- Existing File (Green Icon) -->
       <div
+        v-if="!singleCompanyMode"
         class="px-4 h-row-largest flex flex-row items-center gap-4 p-2"
         :class="
           creatingDemo
@@ -99,7 +106,7 @@
 
       <!-- Create Demo (Pink Icon) -->
       <div
-        v-if="!files?.length"
+        v-if="!singleCompanyMode && !files?.length"
         class="px-4 h-row-largest flex flex-row items-center gap-4 p-2"
         :class="
           creatingDemo
@@ -133,7 +140,11 @@
       <hr class="dark:border-gray-800" />
 
       <!-- File List -->
-      <div class="overflow-y-auto" style="max-height: 340px">
+      <div
+        v-if="!singleCompanyMode"
+        class="overflow-y-auto"
+        style="max-height: 340px"
+      >
         <div
           v-for="(file, i) in files"
           :key="file.dbPath"
@@ -211,7 +222,7 @@
           </button>
         </div>
       </div>
-      <hr v-if="files?.length" class="dark:border-gray-800" />
+      <hr v-if="!singleCompanyMode && files?.length" class="dark:border-gray-800" />
 
       <!-- Language Selector -->
       <div
@@ -229,7 +240,7 @@
       >
         <LanguageSelector v-show="!creatingDemo" class="text-sm w-28" />
         <button
-          v-if="files?.length"
+          v-if="!singleCompanyMode && files?.length"
           class="
             text-sm
             bg-gray-100
@@ -360,6 +371,11 @@ export default defineComponent({
       window.ds = this;
     }
   },
+  computed: {
+    singleCompanyMode(): boolean {
+      return true;
+    },
+  },
   methods: {
     truncate(value: string) {
       if (value.length < 72) {
@@ -436,8 +452,16 @@ export default defineComponent({
         (a, b) => Date.parse(b.modified) - Date.parse(a.modified)
       );
     },
-    newDatabase() {
+    async newDatabase() {
       if (this.creatingDemo) {
+        return;
+      }
+      if (this.singleCompanyMode && this.files.length > 0) {
+        await showDialog({
+          title: this.t`Company already exists`,
+          detail: this.t`Only one company is allowed per machine.`,
+          type: 'warning',
+        });
         return;
       }
 

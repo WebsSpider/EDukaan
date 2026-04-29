@@ -16,6 +16,7 @@
       v-if="platform === 'Windows'"
       :db-path="dbPath"
       :company-name="companyName"
+      :company-logo="loginCompanyLogo"
     />
     <!-- Main Contents -->
     <Desk
@@ -35,6 +36,11 @@
       v-if="activeScreen === 'SetupWizard'"
       @setup-complete="setupComplete"
       @setup-canceled="showDbSelector"
+    />
+    <LicenseOnboarding
+      v-if="activeScreen === 'LicenseOnboarding'"
+      :company-name="companyName"
+      @continue="onLicenseOnboardingContinue"
     />
     <LoginScreen
       v-if="activeScreen === 'Login'"
@@ -84,6 +90,7 @@ import {
 } from './utils/erpnextSync';
 import { ERPNextSyncSettings } from 'models/baseModels/ERPNextSyncSettings/ERPNextSyncSettings';
 import { ErrorLogEnum } from 'fyo/telemetry/types';
+import LicenseOnboarding from './components/LicenseOnboarding/LicenseOnboarding.vue';
 import LoginScreen from './components/Login/LoginScreen.vue';
 import bcrypt from 'bcryptjs';
 
@@ -117,6 +124,7 @@ enum Screen {
   Desk = 'Desk',
   DatabaseSelector = 'DatabaseSelector',
   SetupWizard = 'SetupWizard',
+  LicenseOnboarding = 'LicenseOnboarding',
   Login = 'Login',
 }
 
@@ -127,6 +135,7 @@ export default defineComponent({
     SetupWizard,
     DatabaseSelector,
     WindowsTitleBar,
+    LicenseOnboarding,
     LoginScreen,
   },
   setup() {
@@ -194,6 +203,17 @@ export default defineComponent({
     this.darkMode = darkMode;
   },
   methods: {
+    async shouldShowLicenseOnboardingScreen(): Promise<boolean> {
+      const env = await ipc.getEnv();
+      if (env.uitestSkipLicenseOnboarding) {
+        return false;
+      }
+      const s = await ipc.license.getStatus();
+      return s.shouldShowOnboarding;
+    },
+    onLicenseOnboardingContinue() {
+      this.setLoginScreen(this.selectedFilePath);
+    },
     getEnabledModules(user: UserModules, role: string): string[] {
       if (role === 'Admin') {
         return [
@@ -278,6 +298,14 @@ export default defineComponent({
         typeof lastSelectedFilePath !== 'string' ||
         !lastSelectedFilePath.length
       ) {
+        const dbList = await ipc.getDbList();
+        const latest = dbList?.sort(
+          (a, b) => Date.parse(b.modified) - Date.parse(a.modified)
+        )?.[0];
+        if (latest?.dbPath) {
+          await this.fileSelected(latest.dbPath);
+          return;
+        }
         this.activeScreen = Screen.DatabaseSelector;
         return;
       }
@@ -339,6 +367,11 @@ export default defineComponent({
       fyo.config.set('lastSelectedFilePath', filePath);
       this.companyName = companyName;
       this.loginCompanyLogo = setupWizardOptions.logo ?? '';
+      this.selectedFilePath = filePath;
+      if (await this.shouldShowLicenseOnboardingScreen()) {
+        this.activeScreen = Screen.LicenseOnboarding;
+        return;
+      }
       this.setLoginScreen(filePath);
     },
     async showSetupWizardOrDesk(filePath: string): Promise<void> {
@@ -413,6 +446,18 @@ export default defineComponent({
           }
           showToast({ message: 'Connection Failed', type: 'error' });
         }
+      }
+
+      this.selectedFilePath = filePath;
+      this.companyName = (await fyo.getValue(
+        ModelNameEnum.AccountingSettings,
+        'companyName'
+      )) as string;
+      this.loginCompanyLogo =
+        (fyo.singles.PrintSettings?.logo as string) ?? '';
+      if (await this.shouldShowLicenseOnboardingScreen()) {
+        this.activeScreen = Screen.LicenseOnboarding;
+        return;
       }
 
       const users = await fyo.db.getAll('User', {

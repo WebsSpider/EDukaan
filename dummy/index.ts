@@ -37,11 +37,16 @@ export async function setupDummyInstance(
     country: 'India',
     fullname: 'Lin Florentine',
     email: 'lin@flosclothes.com',
+    phone: '+91 8983-000418',
+    companyAddress: '1st Column, Fitzgerald Bridge, Pune',
     bankName: 'Supreme Bank',
     currency: 'INR',
     fiscalYearStart: getFiscalYear('04-01', true)!.toISOString(),
     fiscalYearEnd: getFiscalYear('04-01', false)!.toISOString(),
     chartOfAccounts: 'India - Chart of Accounts',
+    adminUsername: 'admin',
+    adminPassword: 'admin123',
+    confirmAdminPassword: 'admin123',
   };
   await setupInstance(dbPath, options, fyo);
   fyo.store.skipTelemetryLogging = true;

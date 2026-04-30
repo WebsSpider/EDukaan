@@ -1,9 +1,5 @@
 <template>
-  <feather-icon
-    :name="isExapanded ? 'chevron-up' : 'chevron-down'"
-    class="w-4 h-4 inline-flex cursor-pointer text-gray-700 dark:text-gray-200"
-    @click="toggleExpand"
-  />
+  <div></div>
 
   <div class="relative" @click="toggleExpandAndEmit">
     <Link
@@ -28,43 +24,18 @@
   </div>
 
   <div class="flex items-center">
-    <Int
+    <Float
       :df="{
         fieldname: 'quantity',
-        fieldtype: 'Int',
+        fieldtype: 'Float',
         label: 'Quantity',
       }"
       size="small"
       :border="false"
       :value="getDisplayTransferQuantity()"
-      :read-only="true"
+      :read-only="isReadOnly"
+      @change="(value:number) => setQuantity(value)"
     />
-    <div class="flex flex-col ml-1">
-      <feather-icon
-        name="chevron-up"
-        class="
-          w-3
-          h-3
-          cursor-pointer
-          hover:text-blue-500
-          text-gray-700
-          dark:text-gray-200
-        "
-        @click="adjustQuantity(1)"
-      />
-      <feather-icon
-        name="chevron-down"
-        class="
-          w-3
-          h-3
-          cursor-pointer
-          hover:text-blue-500
-          text-gray-700
-          dark:text-gray-200
-        "
-        @click="adjustQuantity(-1)"
-      />
-    </div>
   </div>
 
   <Link
@@ -164,7 +135,7 @@
         :show-label="true"
         :value="row.quantity"
         @change="(value:number) => setQuantity(value)"
-        :read-only="isUOMConversionEnabled"
+        :read-only="isReadOnly"
       />
     </div>
 
@@ -496,16 +467,6 @@ export default defineComponent({
     },
     emitSelectedRow() {
       this.$emit('selectedRow', this.row);
-    },
-    adjustQuantity(change: number) {
-      let currentQuantity = this.row.quantity ?? 1;
-      let newQuantity = currentQuantity + change;
-
-      if (newQuantity === 0) {
-        return;
-      }
-
-      this.setQuantity(newQuantity);
     },
     async updateTransferUnitOptions() {
       if (!this.row.item) {

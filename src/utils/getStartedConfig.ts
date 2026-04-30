@@ -53,6 +53,13 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           icon: 'opening-ac',
           fieldname: 'openingBalanceChecked',
           description: t`Set up your opening balances before performing any accounting entries`,
+          action: () =>
+            routeTo({
+              path: `/list/JournalEntry/${t`Opening Balances`}`,
+              query: {
+                filters: JSON.stringify({ entryType: 'Opening Entry' }),
+              },
+            }),
           documentation: 'https://docs.frappe.io/books/setup-opening-balances',
         },
         {

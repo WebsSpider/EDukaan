@@ -203,6 +203,67 @@ export function getPageHtml(): string {
   let allRows = [];
   let trialPrefix = 'EDUKAN-TRIAL-';
 
+  function getCompanyOptionsHtml(selectedCompany) {
+    const companies = Array.from(
+      new Set(
+        allRows
+          .map((row) => (row.company_name || '').trim())
+          .filter((name) => !!name)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+    if (!companies.length) {
+      companies.push('Customer');
+    }
+    if (selectedCompany && !companies.includes(selectedCompany)) {
+      companies.unshift(selectedCompany);
+    }
+    return companies
+      .map((name) => {
+        const selected = name === selectedCompany ? ' selected' : '';
+        return '<option value="' + esc(name) + '"' + selected + '>' + esc(name) + '</option>';
+      })
+      .join('');
+  }
+
+  async function inferMachineIdByCompany(companyName, fallbackLicenseKey) {
+    const normalizedCompany = (companyName || '').trim();
+    if (!normalizedCompany) {
+      return '';
+    }
+
+    const candidates = allRows
+      .filter(
+        (row) =>
+          (row.company_name || '').trim() === normalizedCompany &&
+          row.activation_count > 0 &&
+          row.license_key !== fallbackLicenseKey
+      )
+      .map((row) => row.license_key);
+
+    for (const key of candidates) {
+      try {
+        const infoRes = await api(
+          '/api/license-machine-ids?license_key=' + encodeURIComponent(key),
+          { method: 'GET' }
+        );
+        if (!infoRes.ok) {
+          continue;
+        }
+        const info = await infoRes.json().catch(() => ({}));
+        if (typeof info.inferred_machine_id === 'string' && info.inferred_machine_id.trim()) {
+          return info.inferred_machine_id.trim();
+        }
+        if (Array.isArray(info.machine_ids) && info.machine_ids.length === 1) {
+          return String(info.machine_ids[0] || '').trim();
+        }
+      } catch {
+        // Ignore candidate failures and keep searching.
+      }
+    }
+
+    return '';
+  }
+
   function esc(s) {
     const d = document.createElement('div');
     d.textContent = s == null ? '' : String(s);
@@ -417,6 +478,9 @@ export function getPageHtml(): string {
         // Keep UI usable if lookup fails.
       }
     }
+    if (!autoMid) {
+      autoMid = await inferMachineIdByCompany(company, licenseKey);
+    }
     const midNote = isTrial
       ? '<p class="muted">Machine ID is taken from this trial key. You can edit it if needed.</p>'
       : '<p class="muted">Machine ID is auto-filled when a single activation exists for this license. You can still edit it.</p>';
@@ -425,9 +489,9 @@ export function getPageHtml(): string {
       '<label>Machine ID</label><input type="text" id="mid" placeholder="machine id" style="width:100%;margin-bottom:0.75rem" value="' +
       esc(autoMid) +
       '"/>' +
-      '<label>Company name override (optional)</label><input type="text" id="cname" style="width:100%;margin-bottom:0.75rem" value="' +
-      esc(company || '') +
-      '"/>' +
+      '<label>Company</label><select id="cname" style="width:100%;margin-bottom:0.75rem">' +
+      getCompanyOptionsHtml((company || '').trim()) +
+      '</select>' +
       '<div id="file-err" class="err" hidden></div>' +
       '<button type="button" id="dl-file">Download .json</button>';
     modalShell.hidden = false;
@@ -475,9 +539,12 @@ export function getPageHtml(): string {
 
   function openCreateLicenseModal() {
     modalTitle.textContent = 'Create paid license';
+    const companyOptionsHtml = getCompanyOptionsHtml('Customer');
     modalBody.innerHTML =
       '<p class="muted">Adds a new <strong>16-character</strong> key to the server (separate from per-device trial keys).</p>' +
-      '<label>Company name</label><input type="text" id="nc-name" style="width:100%;margin-bottom:0.75rem" value="Customer"/>' +
+      '<label>Company</label><select id="nc-name" style="width:100%;margin-bottom:0.75rem">' +
+      companyOptionsHtml +
+      '</select>' +
       '<label>Valid for (days)</label><input type="number" id="nc-days" min="1" max="3650" value="365" style="width:100%;margin-bottom:0.75rem"/>' +
       '<label>Max devices</label><input type="number" id="nc-dev" min="1" max="999" value="1" style="width:100%;margin-bottom:0.75rem"/>' +
       '<div id="nc-err" class="err" hidden></div>' +

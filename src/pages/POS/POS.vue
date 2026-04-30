@@ -544,8 +544,10 @@ export default defineComponent({
     },
 
     async handleItemSearch(searchTerm: string, addItem?: boolean) {
-      this.itemSearchTerm = searchTerm;
+      const normalizedSearchTerm = searchTerm.trim();
+      this.itemSearchTerm = normalizedSearchTerm;
       if (!addItem) return;
+      if (!normalizedSearchTerm) return;
 
       let quantity = 1;
       const posSettings = fyo.singles.POSSettings;
@@ -561,18 +563,18 @@ export default defineComponent({
         Number(weightDigits);
 
       let isWeightBarcode = false;
-      let itemCode = searchTerm;
+      let itemCode = normalizedSearchTerm;
       let weightPart = '';
 
       if (
         isWeightEnabledBarcode &&
-        searchTerm.length === expectedWeightBarcodeLength
+        normalizedSearchTerm.length === expectedWeightBarcodeLength
       ) {
-        const extractedItemCode = searchTerm.slice(
+        const extractedItemCode = normalizedSearchTerm.slice(
           checkDigits.toString().length,
           checkDigits.toString().length + itemCodeDigits
         );
-        const weightData = searchTerm.slice(
+        const weightData = normalizedSearchTerm.slice(
           checkDigits.toString().length + itemCodeDigits
         );
 
@@ -593,12 +595,24 @@ export default defineComponent({
         matchedItem = allItems.find(
           (item) => item.itemCode === itemCode || item.barcode === itemCode
         );
-      } else if (searchTerm.length === 12) {
-        matchedItem = allItems.find((item) => item.barcode === searchTerm);
+      } else if (normalizedSearchTerm.length === 12) {
+        matchedItem = allItems.find((item) => item.barcode === normalizedSearchTerm);
       }
 
       if (!matchedItem) {
-        matchedItem = allItems.find((item) => item.name === searchTerm);
+        matchedItem = allItems.find(
+          (item) =>
+            item.name === normalizedSearchTerm ||
+            item.itemCode === normalizedSearchTerm ||
+            item.barcode === normalizedSearchTerm
+        );
+      }
+
+      if (!matchedItem) {
+        const lowerSearchTerm = normalizedSearchTerm.toLowerCase();
+        matchedItem = allItems.find(
+          (item) => (item.name as string)?.toLowerCase() === lowerSearchTerm
+        );
       }
 
       if (!matchedItem) return;
@@ -612,9 +626,28 @@ export default defineComponent({
         }
       }
 
-      const itemDoc = this.getItem(matchedItem.name as string);
+      let itemDoc = this.getItem(matchedItem.name as string);
+
+      if (!itemDoc) {
+        const fullItemDoc = (await this.fyo.doc.getDoc(
+          ModelNameEnum.Item,
+          matchedItem.name as string
+        )) as Item;
+
+        itemDoc = {
+          name: fullItemDoc.name as string,
+          image: fullItemDoc.image as string,
+          rate: (fullItemDoc.rate as Money) ?? this.fyo.pesa(0),
+          unit: (fullItemDoc.unit as string) ?? ((matchedItem.unit as string) || ''),
+          hasBatch: !!fullItemDoc.hasBatch,
+          hasSerialNumber: !!fullItemDoc.hasSerialNumber,
+          availableQty:
+            this.itemQtyMap[fullItemDoc.name as string]?.availableQty ?? 0,
+        } as POSItem;
+      }
+
       if (itemDoc && addItem) {
-        await this.addItem(itemDoc as POSItem, quantity);
+        await this.addItem(itemDoc, quantity);
         this.itemSearchTerm = '';
       }
     },
@@ -889,6 +922,9 @@ export default defineComponent({
         }
 
         const itemName = item.name;
+        const itemRate = this.fyo.pesa(
+          `${(item.rate as Money | number | undefined)?.toString?.() ?? item.rate ?? 0}`
+        );
 
         if (item.hasBatch) {
           this.selectedItemForBatch = itemName;
@@ -918,6 +954,15 @@ export default defineComponent({
             (invoiceItem) =>
               invoiceItem.item === itemName && !invoiceItem.isFreeItem
           ) ?? [];
+
+        if (existingItems.length > 0) {
+          showToast({
+            type: 'warning',
+            message: t`Item ${itemName} is already added.`,
+            duration: 'short',
+          });
+          return;
+        }
 
         await validateQty(
           this.sinvDoc as SalesInvoice,
@@ -975,7 +1020,7 @@ export default defineComponent({
           }
 
           await this.sinvDoc.append('items', {
-            rate: item.rate,
+            rate: itemRate,
             item: itemName,
             quantity: addQty,
             hsnCode: itemsHsncode,
@@ -1007,52 +1052,8 @@ export default defineComponent({
           return;
         }
 
-        if (existingItems.length) {
-          if (!this.sinvDoc.priceList) {
-            existingItems[0].rate = item.rate;
-          }
-
-          const currentQty = existingItems[0].quantity ?? 0;
-          const addQty = quantity ?? 1;
-          if (isInventoryItem) {
-            const availableQty = this.itemQtyMap[itemName]?.availableQty ?? 0;
-            if (currentQty + addQty > availableQty) {
-              throw new ValidationError(
-                `Cannot add more than the available quantity for ${itemName}`
-              );
-            }
-          }
-
-          await existingItems[0].set('quantity', currentQty + addQty);
-          if (item.hasSerialNumber) {
-            const qty = currentQty + addQty;
-
-            const serialNumbers = await getExistingActiveSerialNumbersForItem(
-              this.fyo,
-              itemName,
-              qty
-            );
-
-            if (serialNumbers) {
-              this.itemSerialNumbers[itemName] = serialNumbers;
-              await existingItems[0].set('serialNumber', serialNumbers);
-            }
-          }
-
-          await this.applyPricingRule();
-          await this.sinvDoc.runFormulas();
-          if (isInventoryItem) {
-            await validateQty(
-              this.sinvDoc as SalesInvoice,
-              item,
-              existingItems as InvoiceItem[]
-            );
-          }
-          return;
-        }
-
         await this.sinvDoc.append('items', {
-          rate: item.rate,
+          rate: itemRate,
           item: itemName,
           quantity: quantity ? quantity : 1,
           hsnCode: itemsHsncode,

@@ -99,8 +99,7 @@
       "fieldname": "enableInvoiceReturns",
       "label": "Enable Invoice Returns",
       "fieldtype": "Check",
-      "default": false,
-      "hidden": true,
+      "default": true,
       "section": "Features"
     },
     {
@@ -171,8 +170,7 @@
       "fieldname": "enablePointOfSaleWithOutInventory",
       "label": "Enable POS Without Inventory",
       "fieldtype": "Check",
-      "default": false,
-      "hidden": true,
+      "default": true,
       "section": "Features"
     },
     {

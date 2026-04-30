@@ -326,8 +326,8 @@
               :border="true"
               :value="itemSearchTerm"
               :show-clear-button="true"
-              @keyup.enter="(event: KeyboardEvent) => emitEvent('handleItemSearch', (event.target as HTMLInputElement).value, true)"
-              @change="(item: string) => emitEvent('handleItemSearch', item)"
+              @keyup.enter="() => emitEvent('handleItemSearch', itemSearchTerm, true)"
+              @change="(item: string) => emitEvent('handleItemSearch', item, true)"
             />
 
             <Link

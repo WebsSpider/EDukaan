@@ -62,14 +62,6 @@
                 >
                   {{ t`Set Up` }}
                 </Button>
-                <Button
-                  v-if="item.documentation"
-                  class="leading-tight text-base"
-                  :class="{ 'ms-4': item.action }"
-                  @click="handleDocumentation(item)"
-                >
-                  {{ t`Documentation` }}
-                </Button>
               </div>
             </div>
           </div>

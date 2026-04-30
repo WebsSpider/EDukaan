@@ -9,6 +9,7 @@ import {
   app,
   BrowserWindow,
   BrowserWindowConstructorOptions,
+  Menu,
   protocol,
   ProtocolRequest,
   ProtocolResponse,
@@ -123,6 +124,7 @@ export class Main {
   async createWindow() {
     const options = this.getOptions();
     this.mainWindow = new BrowserWindow(options);
+    this.lockDevToolsInProduction();
 
     if (this.isDevelopment) {
       this.setViteServerURL();
@@ -145,6 +147,32 @@ export class Main {
     }
 
     this.setMainWindowListeners();
+  }
+
+  lockDevToolsInProduction() {
+    if (this.mainWindow === null || this.isDevelopment || this.isTest) {
+      return;
+    }
+
+    // Remove default application menu in packaged builds.
+    // This prevents access to any built-in devtools menu actions.
+    Menu.setApplicationMenu(null);
+
+    this.mainWindow.webContents.on('before-input-event', (event, input) => {
+      const isToggleDevToolsShortcut =
+        input.type === 'keyDown' &&
+        ((input.key === 'F12' && !input.shift && !input.alt && !input.meta) ||
+          ((input.control || input.meta) && input.shift && input.key.toUpperCase() === 'I'));
+
+      if (isToggleDevToolsShortcut) {
+        event.preventDefault();
+      }
+    });
+
+    // If any path still attempts to open devtools, close them immediately.
+    this.mainWindow.webContents.on('devtools-opened', () => {
+      this.mainWindow?.webContents.closeDevTools();
+    });
   }
 
   setViteServerURL() {

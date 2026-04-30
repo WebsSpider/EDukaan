@@ -12,6 +12,8 @@ type PersistedV1 = {
   trialStartedAt?: string;
   licenseKey?: string;
   license?: SignedLicense;
+  /** Highest local unix time (ms) observed; used to detect clock rollback. */
+  maxObservedUnixMs?: number;
   /** ISO timestamp of last successful POST /validate (weekly check). */
   lastOnlineValidateAtIso?: string;
   /** When set, local license is ignored for access until user re-activates. */
@@ -66,12 +68,17 @@ export async function patchPersistedState(
 export async function writeLicense(license: SignedLicense): Promise<void> {
   const prev = await readState();
   const isTrial = isTrialLicenseKey(license.license_key);
+  const now = Date.now();
   await writeState({
     ...prev,
     version: 1,
     mode: isTrial ? 'trial' : 'licensed',
     licenseKey: license.license_key,
     license,
+    maxObservedUnixMs:
+      typeof prev.maxObservedUnixMs === 'number'
+        ? Math.max(prev.maxObservedUnixMs, now)
+        : now,
     lastOnlineValidateAtIso: new Date().toISOString(),
     onlineAccessBlockedReason: undefined,
   });

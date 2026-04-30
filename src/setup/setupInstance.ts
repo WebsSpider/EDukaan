@@ -28,39 +28,6 @@ import { CountryInfo } from 'utils/types';
 import { CreateCOA } from './createCOA';
 import { SetupWizardOptions } from './types';
 
-function parseWizardAddress(
-  companyAddress: string,
-  country: string
-): { addressLine1: string; city: string } {
-  const trimmed = companyAddress.trim();
-  const commaParts = trimmed
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (commaParts.length >= 2) {
-    return {
-      addressLine1: commaParts.slice(0, -1).join(', '),
-      city: commaParts[commaParts.length - 1]!,
-    };
-  }
-
-  const lines = trimmed
-    .split(/\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (lines.length >= 2) {
-    return {
-      addressLine1: lines.slice(0, -1).join(', '),
-      city: lines[lines.length - 1]!,
-    };
-  }
-
-  return {
-    addressLine1: trimmed,
-    city: country,
-  };
-}
-
 export default async function setupInstance(
   dbPath: string,
   setupWizardOptions: SetupWizardOptions,
@@ -147,12 +114,10 @@ async function updatePrintSettings(
     companyName,
     email,
     phone,
-    companyAddress,
     country,
   }: SetupWizardOptions,
   fyo: Fyo
 ) {
-  const { addressLine1, city } = parseWizardAddress(companyAddress, country);
   const addressName = `${companyName}-Main`;
   const addressExists = await fyo.db.exists(ModelNameEnum.Address, addressName);
 
@@ -160,8 +125,8 @@ async function updatePrintSettings(
     await fyo.doc
       .getNewDoc(ModelNameEnum.Address, {
         name: addressName,
-        addressLine1,
-        city,
+        addressLine1: companyName,
+        city: country,
         country,
       })
       .sync();

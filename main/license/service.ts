@@ -12,6 +12,9 @@ import { readState, writeLicense, patchPersistedState } from './licenseStore';
 import { verifyLicenseRsaSignature } from './verifySignature';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const CLOCK_ROLLBACK_TOLERANCE_MS = 5 * 60 * 1000;
+const CLOCK_ROLLBACK_BLOCK_REASON =
+  'System clock rollback detected. Set your device date/time to automatic, then restart EDukan.';
 
 function daysRemaining(endIso: string): number {
   const remainingMs = new Date(endIso).getTime() - Date.now();
@@ -136,6 +139,49 @@ export async function getLicenseStatus(): Promise<LicenseGetStatusResult> {
   void runWeeklyOnlineLicenseCheckIfDue().catch(() => undefined);
 
   const state = await readState();
+  const now = Date.now();
+  const maxObserved = state.maxObservedUnixMs;
+
+  // Reject licenses when the local clock is moved backwards significantly.
+  // This prevents extending trial by repeatedly changing system time.
+  if (
+    state.license &&
+    typeof maxObserved === 'number' &&
+    now + CLOCK_ROLLBACK_TOLERANCE_MS < maxObserved
+  ) {
+    if (state.onlineAccessBlockedReason !== CLOCK_ROLLBACK_BLOCK_REASON) {
+      await patchPersistedState({
+        onlineAccessBlockedReason: CLOCK_ROLLBACK_BLOCK_REASON,
+      });
+    }
+
+    return {
+      mode: licenseModeFromKey(state.license),
+      shouldShowOnboarding: true,
+      canAccessApp: false,
+      trialStartedAtIso: null,
+      trialEndsAtIso: null,
+      trialDaysRemaining: null,
+      allowStartTrial: false,
+      machineId,
+      licenseServerMessage: CLOCK_ROLLBACK_BLOCK_REASON,
+      licenseExpiryAtIso: state.license.expiry,
+    };
+  }
+
+  // Keep a monotonic local high-water mark of observed wall clock time.
+  // If user restores clock back to a valid value, clear only rollback block.
+  if (typeof maxObserved !== 'number' || now > maxObserved) {
+    await patchPersistedState({
+      maxObservedUnixMs: now,
+      ...(state.onlineAccessBlockedReason === CLOCK_ROLLBACK_BLOCK_REASON
+        ? { onlineAccessBlockedReason: undefined }
+        : {}),
+    });
+  } else if (state.onlineAccessBlockedReason === CLOCK_ROLLBACK_BLOCK_REASON) {
+    await patchPersistedState({ onlineAccessBlockedReason: undefined });
+  }
+
   if (state.onlineAccessBlockedReason) {
     return {
       mode: state.license ? licenseModeFromKey(state.license) : 'none',

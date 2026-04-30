@@ -59,7 +59,6 @@ export class SetupWizard extends Doc {
   fiscalYearEnd?: Date;
   fiscalYearStart?: Date;
   phone?: string;
-  companyAddress?: string;
 
   formulas: FormulaMap = {
     fiscalYearStart: {

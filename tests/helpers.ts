@@ -17,7 +17,6 @@ export function getTestSetupWizardOptions(): SetupWizardOptions {
     fullname: 'Test Person',
     email: 'test@testmyfantasy.com',
     phone: '+91 0000000000',
-    companyAddress: '123 Test Street, Test City',
     bankName: 'Test Bank of Scriptia',
     currency: 'INR',
     fiscalYearStart: DateTime.fromJSDate(

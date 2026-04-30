@@ -38,7 +38,6 @@ export async function setupDummyInstance(
     fullname: 'Lin Florentine',
     email: 'lin@flosclothes.com',
     phone: '+91 8983-000418',
-    companyAddress: '1st Column, Fitzgerald Bridge, Pune',
     bankName: 'Supreme Bank',
     currency: 'INR',
     fiscalYearStart: getFiscalYear('04-01', true)!.toISOString(),

@@ -34,12 +34,12 @@ const appSourcePath = path.join(root, 'dist_electron', 'build', 'main.js');
 
   test('fill setup form', async (t) => {
     await window.getByTestId('create-new-file').click();
-    await window.getByTestId('submit-button').waitFor();
+    await window.getByTestId('next-button').waitFor();
 
     t.equal(
-      await window.getByTestId('submit-button').isDisabled(),
+      await window.getByTestId('next-button').isDisabled(),
       true,
-      'submit button is disabled before form fill'
+      'next button is disabled before company setup fill'
     );
 
     await window.getByPlaceholder('Company Name').fill('Test Company');
@@ -51,10 +51,16 @@ const appSourcePath = path.join(root, 'dist_electron', 'build', 'main.js');
     await window.getByPlaceholder('Prime Bank').blur();
 
     t.equal(
-      await window.getByTestId('submit-button').isDisabled(),
+      await window.getByTestId('next-button').isDisabled(),
       false,
-      'submit button enabled after form fill'
+      'next button enabled after company setup fill'
     );
+
+    await window.getByTestId('next-button').click();
+    await window.getByTestId('submit-button').waitFor();
+    await window.getByLabel('Admin Username').fill('admin');
+    await window.getByLabel('Admin Password').fill('admin123');
+    await window.getByLabel('Confirm Admin Password').fill('admin123');
   });
 
   test('create new instance', async (t) => {

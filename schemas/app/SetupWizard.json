@@ -42,14 +42,6 @@
       "section": "Default"
     },
     {
-      "fieldname": "companyAddress",
-      "label": "Address",
-      "fieldtype": "Text",
-      "placeholder": "Street, city, postal code",
-      "required": true,
-      "section": "Default"
-    },
-    {
       "fieldname": "country",
       "label": "Country",
       "fieldtype": "AutoComplete",

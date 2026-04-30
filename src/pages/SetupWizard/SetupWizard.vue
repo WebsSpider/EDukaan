@@ -1,7 +1,7 @@
 <template>
   <FormContainer
     :show-header="false"
-    class="justify-content items-center h-full"
+    class="justify-content items-center h-full py-3 sm:py-4"
     :class="{ 'window-drag': platform !== 'Windows' }"
   >
     <template #body>
@@ -14,6 +14,7 @@
           dark:bg-gray-890
           border-b
           dark:border-gray-800
+          z-10
         "
       >
       </FormHeader>
@@ -58,6 +59,7 @@
           bottom-0
           bg-white
           dark:bg-gray-890
+          z-10
         "
       >
         <p v-if="loading" class="text-base text-gray-600 dark:text-gray-400">

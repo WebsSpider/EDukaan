@@ -410,6 +410,9 @@ async function updateInventorySettings(fyo: Fyo) {
   const inventorySettings = (await fyo.doc.getDoc(
     ModelNameEnum.InventorySettings
   )) as InventorySettings;
+  const accountingSettings = (await fyo.doc.getDoc(
+    ModelNameEnum.AccountingSettings
+  )) as AccountingSettings;
 
   if (!inventorySettings.valuationMethod) {
     await inventorySettings.set('valuationMethod', ValuationMethod.FIFO);
@@ -439,6 +442,16 @@ async function updateInventorySettings(fyo: Fyo) {
     await inventorySettings.set('defaultLocation', location);
   }
 
+  // During first-time setup, AccountingSettings defaults may not trigger
+  // the change hook that syncs POS-without-inventory related inventory flags.
+  if (accountingSettings.enablePointOfSaleWithOutInventory) {
+    await inventorySettings.set('enableBatches', true);
+    await inventorySettings.set('enableUomConversions', true);
+    await inventorySettings.set('enableSerialNumber', true);
+    await inventorySettings.set('enableBarcodes', true);
+    await inventorySettings.set('enablePointOfSale', true);
+  }
+
   await inventorySettings.sync();
 }
 
@@ -453,6 +466,15 @@ async function createAdminUser(
       password: adminPassword,
       role: 'Admin',
       disabled: false,
+      canAccessGetStarted: true,
+      canAccessDashboard: true,
+      canAccessSales: true,
+      canAccessPurchases: true,
+      canAccessCommon: true,
+      canAccessReports: true,
+      canAccessInventory: true,
+      canAccessPOS: true,
+      canAccessSetup: true,
     })
     .sync();
 }

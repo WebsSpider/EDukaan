@@ -240,12 +240,28 @@ export function getSalesQuoteAction(fyo: Fyo): Action {
   };
 }
 
+/** Manual Payment entry: submitted invoice with outstanding, and auto-pay-on-submit is off for this doc. */
+export function canRecordManualInvoicePayment(doc: Doc): boolean {
+  if (!(doc instanceof Invoice)) {
+    return false;
+  }
+
+  if (!doc.isSubmitted || (doc.outstandingAmount as Money).isZero()) {
+    return false;
+  }
+
+  if (doc.makeAutoPayment && doc.autoPaymentAccount) {
+    return false;
+  }
+
+  return true;
+}
+
 export function getMakePaymentAction(fyo: Fyo): Action {
   return {
     label: fyo.t`Payment`,
     group: fyo.t`Create`,
-    condition: (doc: Doc) =>
-      doc.isSubmitted && !(doc.outstandingAmount as Money).isZero(),
+    condition: (doc: Doc) => canRecordManualInvoicePayment(doc),
     action: async (doc, router) => {
       const schemaName = doc.schema.name;
       const payment = (doc as Invoice).getPayment();

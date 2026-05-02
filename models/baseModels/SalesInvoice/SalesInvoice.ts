@@ -1,5 +1,10 @@
 import { Fyo, t } from 'fyo';
-import { Action, ListViewSettings, ValidationMap } from 'fyo/model/types';
+import {
+  Action,
+  DefaultMap,
+  ListViewSettings,
+  ValidationMap,
+} from 'fyo/model/types';
 import { LedgerPosting } from 'models/Transactional/LedgerPosting';
 import { ModelNameEnum } from 'models/types';
 import {
@@ -16,8 +21,14 @@ import { Party } from '../Party/Party';
 import { ValidationError } from 'fyo/utils/errors';
 import { Money } from 'pesa';
 import { Doc } from 'fyo/model/doc';
+import { getWalkInCustomerName } from 'utils/walkInCustomer';
 
 export class SalesInvoice extends Invoice {
+  static defaults: DefaultMap = {
+    ...Invoice.defaults,
+    party: () => getWalkInCustomerName(),
+  };
+
   items?: SalesInvoiceItem[];
 
   async getPosting() {

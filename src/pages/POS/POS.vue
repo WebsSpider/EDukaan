@@ -174,6 +174,10 @@ import {
   getItemVisibility,
   isLoyaltyProgramExpiredAndMaxed,
 } from 'models/helpers';
+import {
+  ensureWalkInCustomer,
+  getWalkInCustomerName,
+} from 'utils/walkInCustomer';
 import { ItemVisibility } from 'src/components/POS/types';
 import {
   POSItem,
@@ -315,7 +319,7 @@ export default defineComponent({
     validateIsPosSettingsSet(fyo);
     this.setCouponCodeDoc();
     this.setSinvDoc();
-    this.setDefaultCustomer();
+    await this.setDefaultCustomer();
     this.setShortcuts();
     this.addQuickQtyListeners();
 
@@ -824,11 +828,12 @@ export default defineComponent({
     setPaymentMethod(method: string) {
       this.paymentMethod = method;
     },
-    setDefaultCustomer() {
-      this.defaultCustomer =
-        this.posProfile?.posCustomer ??
-        this.fyo.singles.Defaults?.posCustomer ??
-        '';
+    async setDefaultCustomer() {
+      await ensureWalkInCustomer(this.fyo);
+      const configured =
+        (this.posProfile?.posCustomer as string | undefined)?.trim() ||
+        (this.fyo.singles.Defaults?.posCustomer as string | undefined)?.trim();
+      this.defaultCustomer = configured || getWalkInCustomerName();
       this.sinvDoc.party = this.defaultCustomer;
     },
     setItemDiscounts() {
@@ -840,11 +845,26 @@ export default defineComponent({
       this.itemQtyMap = await getItemQtyMap(this.sinvDoc as SalesInvoice);
     },
     setSinvDoc() {
-      this.sinvDoc = this.fyo.doc.getNewDoc(ModelNameEnum.SalesInvoice, {
+      const existingParty =
+        typeof this.sinvDoc?.party === 'string'
+          ? this.sinvDoc.party.trim()
+          : '';
+      const configured =
+        typeof this.defaultCustomer === 'string'
+          ? this.defaultCustomer.trim()
+          : '';
+      const prevParty = existingParty || configured || undefined;
+      const data: Record<string, unknown> = {
         account: this.fyo.singles.POSSettings?.defaultAccount,
-        party: this.sinvDoc.party ?? this.defaultCustomer,
         isPOS: true,
-      }) as SalesInvoice;
+      };
+      if (prevParty) {
+        data.party = prevParty;
+      }
+      this.sinvDoc = this.fyo.doc.getNewDoc(
+        ModelNameEnum.SalesInvoice,
+        data
+      ) as SalesInvoice;
     },
     setCouponCodeDoc() {
       this.coupons = this.fyo.doc.getNewDoc(
@@ -1349,7 +1369,7 @@ export default defineComponent({
       this.transferAmount = fyo.pesa(0);
       await this.setItems();
 
-      if (!this.defaultCustomer) {
+      if (!this.defaultCustomer?.trim()) {
         this.sinvDoc.party = '';
       }
     },

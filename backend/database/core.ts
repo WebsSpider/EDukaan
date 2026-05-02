@@ -836,8 +836,17 @@ export default class DatabaseCore extends DatabaseBase {
       .select('name')
       .where(updateKey)) as { name: string }[];
 
+    // Optional singles (e.g. Link) clear as null/'' in the doc layer; SQLite
+    // SingleValue.value is NOT NULL, so remove the row instead of SET NULL.
+    if (this.#isClearedSingleStorageValue(value)) {
+      if (names?.length) {
+        await this.knex!('SingleValue').where(updateKey).delete();
+      }
+      return;
+    }
+
     if (!names?.length) {
-      this.#insertSingleValue(singleSchemaName, fieldname, value);
+      await this.#insertSingleValue(singleSchemaName, fieldname, value);
     } else {
       return await this.knex!('SingleValue').where(updateKey).update({
         value,
@@ -847,11 +856,18 @@ export default class DatabaseCore extends DatabaseBase {
     }
   }
 
+  #isClearedSingleStorageValue(value: RawValue): boolean {
+    return value === null || value === '';
+  }
+
   async #insertSingleValue(
     singleSchemaName: string,
     fieldname: string,
     value: RawValue
   ) {
+    if (this.#isClearedSingleStorageValue(value)) {
+      return;
+    }
     const updateMap = getDefaultMetaFieldValueMap();
     const fieldValueMap: FieldValueMap = Object.assign({}, updateMap, {
       parent: singleSchemaName,

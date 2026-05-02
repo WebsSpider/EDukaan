@@ -55,6 +55,13 @@
           class="w-4 h-4"
         ></feather-icon>
       </Button>
+      <Button
+        v-if="canShowInvoicePaymentButton"
+        type="primary"
+        @click="makeInvoicePayment"
+      >
+        {{ t`Payment` }}
+      </Button>
       <DropdownWithActions
         v-for="group of groupedActions"
         :key="group.label"
@@ -191,8 +198,13 @@ import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
-import { getDocStatus } from 'models/helpers';
+import {
+  canRecordManualInvoicePayment,
+  getDocStatus,
+  getMakePaymentAction,
+} from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
+import { ensureWalkInCustomer } from 'utils/walkInCustomer';
 import { Field, Schema } from 'schemas/types';
 import Button from 'src/components/Button.vue';
 import Barcode from 'src/components/Controls/Barcode.vue';
@@ -202,6 +214,7 @@ import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import { getErrorMessage } from 'src/utils';
+import router from 'src/router';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
@@ -441,6 +454,9 @@ export default defineComponent({
 
       return getGroupedActionsForDoc(this.doc);
     },
+    canShowInvoicePaymentButton(): boolean {
+      return this.hasDoc && canRecordManualInvoicePayment(this.doc);
+    },
   },
   beforeMount() {
     this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
@@ -537,6 +553,10 @@ export default defineComponent({
         this.updateGroupedFields();
       }
     },
+    async makeInvoicePayment() {
+      const { action } = getMakePaymentAction(this.fyo);
+      await action(this.doc, router);
+    },
     async setDoc() {
       if (this.hasDoc) {
         return;
@@ -546,6 +566,10 @@ export default defineComponent({
         this.schemaName,
         this.name
       );
+
+      if (this.schemaName === ModelNameEnum.SalesInvoice && !this.name) {
+        await ensureWalkInCustomer(this.fyo);
+      }
     },
     replacePathAfterSync() {
       if (!this.hasDoc || this.doc.inserted) {

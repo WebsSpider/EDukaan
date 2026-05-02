@@ -23,6 +23,7 @@ import {
 } from 'src/utils/initialization';
 import { getRandomString } from 'utils';
 import { getDefaultLocations, getDefaultUOMs } from 'utils/defaults';
+import { ensureWalkInCustomer } from 'utils/walkInCustomer';
 import { getCountryCodeFromCountry, getCountryInfo } from 'utils/misc';
 import { CountryInfo } from 'utils/types';
 import { CreateCOA } from './createCOA';
@@ -74,6 +75,8 @@ async function createDefaultEntries(fyo: Fyo) {
   for (const loc of getDefaultLocations(fyo)) {
     await checkAndCreateDoc(ModelNameEnum.Location, loc, fyo);
   }
+
+  await ensureWalkInCustomer(fyo);
 }
 
 async function initializeDatabase(dbPath: string, country: string, fyo: Fyo) {

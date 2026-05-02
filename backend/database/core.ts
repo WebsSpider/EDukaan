@@ -818,6 +818,13 @@ export default class DatabaseCore extends DatabaseBase {
         continue;
       }
 
+      // A null value means the field was explicitly cleared — remove the row
+      // so the setting is fully unset (e.g. clearing the auto-payment account).
+      if (value === null) {
+        await this.#deleteSingle(singleSchemaName, field.fieldname);
+        continue;
+      }
+
       await this.#updateSingleValue(singleSchemaName, field.fieldname, value);
     }
   }

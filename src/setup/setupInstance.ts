@@ -16,6 +16,7 @@ import { numberSeriesDefaultsMap } from 'models/baseModels/Defaults/Defaults';
 import { InventorySettings } from 'models/inventory/InventorySettings';
 import { ValuationMethod } from 'models/inventory/types';
 import { ModelNameEnum } from 'models/types';
+import { PartyRoleEnum } from 'models/baseModels/Party/types';
 import { createRegionalRecords } from 'src/regional';
 import {
   initializeInstance,
@@ -48,6 +49,7 @@ export default async function setupInstance(
   await createDefaultEntries(fyo);
   await createDefaultNumberSeries(fyo);
   await updateInventorySettings(fyo);
+  await createWalkInCustomer(fyo);
   await createAdminUser(setupWizardOptions, fyo);
 
   if (fyo.isElectron) {
@@ -442,4 +444,36 @@ async function createAdminUser(
       canAccessSetup: true,
     })
     .sync();
+}
+
+/**
+ * Creates a default Walk-In Customer party when the chart of accounts includes
+ * a Receivable account. The walk-in customer is pre-selected on new sales
+ * invoices and POS sessions when no other default customer is configured.
+ */
+async function createWalkInCustomer(fyo: Fyo) {
+  const receivableAccounts = await fyo.db.getAllRaw(ModelNameEnum.Account, {
+    filters: { accountType: 'Receivable', isGroup: false },
+  });
+
+  if (!receivableAccounts.length) {
+    return;
+  }
+
+  const walkInName = fyo.t`Walk-In Customer`;
+  const alreadyExists = await fyo.db.exists(ModelNameEnum.Party, walkInName);
+
+  if (!alreadyExists) {
+    await fyo.doc
+      .getNewDoc(ModelNameEnum.Party, {
+        name: walkInName,
+        role: PartyRoleEnum.Customer,
+      })
+      .sync();
+  }
+
+  const defaults = fyo.singles.Defaults;
+  if (!defaults?.posCustomer) {
+    await defaults?.setAndSync('posCustomer', walkInName);
+  }
 }

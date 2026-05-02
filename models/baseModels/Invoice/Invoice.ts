@@ -1435,6 +1435,12 @@ export abstract class Invoice extends Transactional {
       !!doc.autoStockTransferLocation,
     numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
     setDiscountAmount: () => true,
+    party: (doc) => {
+      if (doc.schemaName !== ModelNameEnum.SalesInvoice) {
+        return;
+      }
+      return doc.fyo.singles.Defaults?.posCustomer as string | undefined;
+    },
     terms: (doc) => {
       const defaults = doc.fyo.singles.Defaults;
       if (doc.schemaName === ModelNameEnum.SalesInvoice) {

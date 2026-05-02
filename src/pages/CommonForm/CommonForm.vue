@@ -55,6 +55,14 @@
           class="w-4 h-4"
         ></feather-icon>
       </Button>
+      <Button
+        v-if="canShowInvoicePayButton"
+        type="primary"
+        :title="t`Record a payment for this invoice`"
+        @click="doInvoicePayment"
+      >
+        {{ t`Payment` }}
+      </Button>
       <DropdownWithActions
         v-for="group of groupedActions"
         :key="group.label"
@@ -191,7 +199,9 @@ import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
-import { getDocStatus } from 'models/helpers';
+import { Money } from 'pesa';
+import { getDocStatus, openInvoicePayment } from 'models/helpers';
+import { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import Button from 'src/components/Button.vue';
@@ -441,6 +451,35 @@ export default defineComponent({
 
       return getGroupedActionsForDoc(this.doc);
     },
+    canShowInvoicePayButton(): boolean {
+      if (!this.hasDoc) {
+        return false;
+      }
+
+      if (
+        this.schemaName !== ModelNameEnum.SalesInvoice &&
+        this.schemaName !== ModelNameEnum.PurchaseInvoice
+      ) {
+        return false;
+      }
+
+      if (!this.doc.isSubmitted) {
+        return false;
+      }
+
+      const outstanding = this.doc.outstandingAmount as Money | undefined;
+      if (!outstanding || outstanding.isZero()) {
+        return false;
+      }
+
+      // When makeAutoPayment is true the invoice uses the pay-on-submit flow;
+      // a separate manual payment button would duplicate or confuse that path.
+      if (this.doc.makeAutoPayment) {
+        return false;
+      }
+
+      return true;
+    },
   },
   beforeMount() {
     this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
@@ -512,6 +551,13 @@ export default defineComponent({
       this.updateGroupedFields();
     },
     routeTo,
+    async doInvoicePayment() {
+      if (!this.hasDoc || !(this.doc instanceof Invoice)) {
+        return;
+      }
+
+      await openInvoicePayment(this.doc, this.$router);
+    },
     async toggleWidth() {
       const value = !this.useFullWidth;
       await this.fyo.singles.Misc?.setAndSync('useFullWidth', value);

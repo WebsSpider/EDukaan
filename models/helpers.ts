@@ -247,40 +247,51 @@ export function getMakePaymentAction(fyo: Fyo): Action {
     condition: (doc: Doc) =>
       doc.isSubmitted && !(doc.outstandingAmount as Money).isZero(),
     action: async (doc, router) => {
-      const schemaName = doc.schema.name;
-      const payment = (doc as Invoice).getPayment();
-      if (!payment) {
-        return;
-      }
-
-      await payment?.set('referenceType', schemaName);
-      const currentRoute = router.currentRoute.value.fullPath;
-      payment.once('afterSync', async () => {
-        await payment.submit();
-        await doc.load();
-        await router.push(currentRoute);
-      });
-
-      const hideFields = ['party', 'for'];
-
-      if (!fyo.singles.AccountingSettings?.enableInvoiceReturns) {
-        hideFields.push('paymentType');
-      }
-
-      if (doc.schemaName === ModelNameEnum.SalesInvoice) {
-        hideFields.push('account');
-      } else {
-        hideFields.push('paymentAccount');
-      }
-
-      await payment.runFormulas();
-      const { openQuickEdit } = await import('src/utils/ui');
-      await openQuickEdit({
-        doc: payment,
-        hideFields,
-      });
+      await openInvoicePayment(doc as Invoice, router);
     },
   };
+}
+
+/**
+ * Opens the quick-edit payment dialog for a submitted invoice.
+ * Shared between the header button and the Create-menu action.
+ */
+export async function openInvoicePayment(
+  doc: Invoice,
+  router: Router
+): Promise<void> {
+  const schemaName = doc.schema.name;
+  const payment = doc.getPayment();
+  if (!payment) {
+    return;
+  }
+
+  await payment.set('referenceType', schemaName);
+  const currentRoute = router.currentRoute.value.fullPath;
+  payment.once('afterSync', async () => {
+    await payment.submit();
+    await doc.load();
+    await router.push(currentRoute);
+  });
+
+  const hideFields = ['party', 'for'];
+
+  if (!doc.fyo.singles.AccountingSettings?.enableInvoiceReturns) {
+    hideFields.push('paymentType');
+  }
+
+  if (doc.schemaName === ModelNameEnum.SalesInvoice) {
+    hideFields.push('account');
+  } else {
+    hideFields.push('paymentAccount');
+  }
+
+  await payment.runFormulas();
+  const { openQuickEdit } = await import('src/utils/ui');
+  await openQuickEdit({
+    doc: payment,
+    hideFields,
+  });
 }
 
 export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {

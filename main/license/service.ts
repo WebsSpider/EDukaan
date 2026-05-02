@@ -142,10 +142,13 @@ export async function getLicenseStatus(): Promise<LicenseGetStatusResult> {
   const now = Date.now();
   const maxObserved = state.maxObservedUnixMs;
 
-  // Reject licenses when the local clock is moved backwards significantly.
-  // This prevents extending trial by repeatedly changing system time.
+  // Reject only trial licenses when the local clock is moved backwards significantly.
+  // This prevents extending a trial by repeatedly rolling back the system clock.
+  // Paid/registered licenses are not blocked — normal clock corrections (NTP,
+  // sleep/wake, small adjustments) must not send legitimate users back to activation.
   if (
     state.license &&
+    isTrialLicenseKey(state.license.license_key) &&
     typeof maxObserved === 'number' &&
     now + CLOCK_ROLLBACK_TOLERANCE_MS < maxObserved
   ) {

@@ -7,7 +7,7 @@ on:
     inputs:
       release_tag:
         description: >
-          Git tag to build from and attach assets to (e.g. v0.1.3). Required to
+          Git tag to build from and attach assets to (e.g. v0.1.4). Required to
           upload to an existing GitHub Release. Leave empty to build the default
           branch only (artifacts stay in the workflow run, no release upload).
         required: false

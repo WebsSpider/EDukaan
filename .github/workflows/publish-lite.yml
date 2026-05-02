@@ -107,18 +107,19 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      # Only versioned installer names — avoid **/*.exe (duplicates EDukan.exe / elevate.exe from unpacked dirs).
       - name: Publish assets to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.release.tag_name || github.event.inputs.release_tag }}
           files: |
-            release-assets/**/*.dmg
-            release-assets/**/*.zip
-            release-assets/**/*.exe
-            release-assets/**/*.AppImage
-            release-assets/**/*.deb
-            release-assets/**/*.rpm
-            release-assets/**/*.blockmap
-            release-assets/latest*.yml
+            release-assets/**/EDukan-v*.dmg
+            release-assets/**/EDukan-v*.zip
+            release-assets/**/EDukan-v*.exe
+            release-assets/**/EDukan-v*.AppImage
+            release-assets/**/EDukan-v*.deb
+            release-assets/**/EDukan-v*.rpm
+            release-assets/**/EDukan-v*.blockmap
+            release-assets/**/latest*.yml
           generate_release_notes: false
           fail_on_unmatched_files: false

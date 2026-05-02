@@ -4,6 +4,11 @@ import { $ } from 'execa';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getMainProcessCommonConfig } from './helpers.mjs';
+import dotenv from 'dotenv';
+
+// Load .env so that secrets like EDUKAN_GDRIVE_CREDENTIALS_JSON are available
+// to the esbuild `define` step during development.
+dotenv.config();
 
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
 process.env['NODE_ENV'] = 'development';

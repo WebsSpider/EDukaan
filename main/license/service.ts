@@ -267,6 +267,7 @@ export async function getLicenseStatus(): Promise<LicenseGetStatusResult> {
     machineId,
     licenseServerMessage: null,
     licenseExpiryAtIso: state.license.expiry,
+    features: Array.isArray(state.license.features) ? state.license.features : [],
   };
 }
 

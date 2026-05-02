@@ -48,6 +48,13 @@ export enum IPC_ACTIONS {
   LICENSE_START_TRIAL = 'license-start-trial',
   LICENSE_SUBMIT_KEY = 'license-submit-key',
   LICENSE_INSTALL_JSON = 'license-install-json',
+  /** Google Drive cloud backup */
+  BACKUP_GET_STATUS = 'backup-get-status',
+  BACKUP_RUN_NOW = 'backup-run-now',
+  BACKUP_SET_HOUR = 'backup-set-hour',
+  BACKUP_SET_DB_PATH = 'backup-set-db-path',
+  BACKUP_RESTORE_FILE = 'backup-restore-file',
+  BACKUP_IS_CONFIGURED = 'backup-is-configured',
 }
 
 // ipcMain.send(...)
@@ -55,6 +62,7 @@ export enum IPC_CHANNELS {
   TRIGGER_ERPNEXT_SYNC = 'trigger-erpnext-sync',
   LOG_MAIN_PROCESS_ERROR = 'main-process-error',
   CONSOLE_LOG = 'console-log',
+  BACKUP_TOAST = 'backup:toast',
 }
 
 export enum DB_CONN_FAILURE {

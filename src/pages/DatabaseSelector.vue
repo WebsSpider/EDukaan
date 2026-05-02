@@ -224,6 +224,27 @@
       </div>
       <hr v-if="!singleCompanyMode && files?.length" class="dark:border-gray-800" />
 
+      <!-- Restore from Backup (Orange Icon) -->
+      <div
+        v-if="!singleCompanyMode || !files?.length"
+        class="px-4 h-row-largest flex flex-row items-center gap-4 p-2 hover:bg-gray-50 dark:hover:bg-gray-890 cursor-pointer"
+        @click="restoreFromBackup"
+      >
+        <div
+          class="w-8 h-8 rounded-full bg-orange-500 dark:bg-orange-600 relative flex-center"
+        >
+          <feather-icon name="rotate-ccw" class="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <p class="font-medium dark:text-gray-200">
+            {{ t`Restore from Backup` }}
+          </p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            {{ t`Restore a company from a backup file (.db.gz)` }}
+          </p>
+        </div>
+      </div>
+
       <!-- Language Selector -->
       <div
         class="
@@ -270,6 +291,13 @@
       :full-width="true"
       :percent="creationPercent"
       :message="creationMessage"
+    />
+    <Loading
+      v-if="restoringBackup"
+      :open="restoringBackup"
+      :show-x="false"
+      :full-width="true"
+      :message="t`Restoring backup, please wait…`"
     />
 
     <!-- Base Count Selection when Dev -->
@@ -351,6 +379,7 @@ export default defineComponent({
       creationMessage: '',
       creationPercent: 0,
       creatingDemo: false,
+      restoringBackup: false,
       loadingDatabase: false,
       files: [],
     } as {
@@ -359,6 +388,7 @@ export default defineComponent({
       creationMessage: string;
       creationPercent: number;
       creatingDemo: boolean;
+      restoringBackup: boolean;
       loadingDatabase: boolean;
       files: ConfigFilesWithModified[];
     };
@@ -488,6 +518,46 @@ export default defineComponent({
       }
 
       this.$emit('file-selected', filePath);
+    },
+
+    async restoreFromBackup() {
+      if (this.creatingDemo || this.restoringBackup) {
+        return;
+      }
+
+      // User only picks the .db.gz archive — destination is handled automatically.
+      const result = await ipc.getOpenFilePath({
+        title: t`Select Backup File`,
+        properties: ['openFile'],
+        filters: [
+          { name: t`EDukan Backup`, extensions: ['gz'] },
+          { name: t`All Files`, extensions: ['*'] },
+        ],
+      });
+
+      const backupPath = result?.filePaths?.[0];
+      if (!backupPath) {
+        return;
+      }
+
+      this.restoringBackup = true;
+      try {
+        const res = await ipc.backup.restoreFile(backupPath);
+        if (!res.ok || !res.destPath) {
+          await showDialog({
+            title: t`Restore Failed`,
+            detail: res.error ?? t`An unknown error occurred.`,
+            type: 'error',
+          });
+          return;
+        }
+
+        // Load the restored DB — App.vue fileSelected will run initializeInstance
+        // and then navigate to the login screen automatically.
+        this.emitFileSelected(res.destPath);
+      } finally {
+        this.restoringBackup = false;
+      }
     },
   },
 });

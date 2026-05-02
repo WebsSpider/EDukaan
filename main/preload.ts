@@ -24,6 +24,7 @@ import type {
   LicenseStartTrialResult,
   LicenseSubmitKeyResult,
 } from 'utils/license/types';
+import type { BackupState } from '../main/backup/backupStore';
 
 type IPCRendererListener = Parameters<typeof ipcRenderer.on>[1];
 const ipc = {
@@ -264,6 +265,43 @@ const ipc = {
 
   registerConsoleLogListener(listener: IPCRendererListener) {
     ipcRenderer.on(IPC_CHANNELS.CONSOLE_LOG, listener);
+  },
+
+  registerBackupToastListener(listener: IPCRendererListener) {
+    ipcRenderer.on(IPC_CHANNELS.BACKUP_TOAST, listener);
+  },
+
+  backup: {
+    async isConfigured(): Promise<boolean> {
+      return (await ipcRenderer.invoke(IPC_ACTIONS.BACKUP_IS_CONFIGURED)) as boolean;
+    },
+    async getStatus(): Promise<BackupState> {
+      return (await ipcRenderer.invoke(IPC_ACTIONS.BACKUP_GET_STATUS)) as BackupState;
+    },
+    async setTime(hour: number, minute: number): Promise<{ ok: boolean }> {
+      return (await ipcRenderer.invoke(IPC_ACTIONS.BACKUP_SET_HOUR, hour, minute)) as { ok: boolean };
+    },
+    async setDbPath(dbPath: string, companyName: string): Promise<{ ok: boolean }> {
+      return (await ipcRenderer.invoke(
+        IPC_ACTIONS.BACKUP_SET_DB_PATH,
+        dbPath,
+        companyName
+      )) as { ok: boolean };
+    },
+    async runNow(): Promise<{ ok: boolean; error?: string }> {
+      return (await ipcRenderer.invoke(IPC_ACTIONS.BACKUP_RUN_NOW)) as {
+        ok: boolean;
+        error?: string;
+      };
+    },
+    async restoreFile(
+      backupGzPath: string
+    ): Promise<{ ok: boolean; destPath?: string; error?: string }> {
+      return (await ipcRenderer.invoke(
+        IPC_ACTIONS.BACKUP_RESTORE_FILE,
+        backupGzPath
+      )) as { ok: boolean; destPath?: string; error?: string };
+    },
   },
 
   db: {

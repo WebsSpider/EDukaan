@@ -9,6 +9,21 @@ import path from 'path';
  * @returns {import('esbuild').BuildOptions}
  */
 export function getMainProcessCommonConfig(root) {
+  // Bake build-time secrets into the main process binary so they're available
+  // at runtime via process.env.XXX without requiring the user to set them.
+  const define = {};
+  const secretEnvVars = [
+    'BACKBLAZE_KEYID',
+    'BACKBLAZE_APPLICATION_KEY',
+    'BACKBLAZE_ENDPOINT',
+    'BACKBLAZE_BUCKET',
+  ];
+  for (const key of secretEnvVars) {
+    if (process.env[key]) {
+      define[`process.env.${key}`] = JSON.stringify(process.env[key]);
+    }
+  }
+
   return {
     entryPoints: [
       path.join(root, 'main.ts'),
@@ -22,6 +37,7 @@ export function getMainProcessCommonConfig(root) {
     external: ['knex', 'electron', 'better-sqlite3', 'electron-store'],
     plugins: [excludeVendorFromSourceMap],
     write: true,
+    define: Object.keys(define).length ? define : undefined,
   };
 }
 

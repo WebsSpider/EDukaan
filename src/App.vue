@@ -350,6 +350,7 @@ export default defineComponent({
         });
 
         fyo.config.set('lastSelectedFilePath', null);
+        this.activeScreen = Screen.DatabaseSelector;
         return;
       }
 

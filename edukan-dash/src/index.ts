@@ -198,6 +198,7 @@ export default {
           company_name?: string;
           expiry_days?: number;
           max_devices?: number;
+          backup_enabled?: boolean;
         } | null;
 
         const company_name = (body?.company_name ?? '').trim() || 'Customer';
@@ -209,6 +210,7 @@ export default {
           999,
           Math.max(1, Number(body?.max_devices) || 1)
         );
+        const backup_enabled = body?.backup_enabled === true;
 
         let license_key = '';
         for (let a = 0; a < 24; a++) {
@@ -226,11 +228,12 @@ export default {
 
         const expiry = new Date();
         expiry.setUTCDate(expiry.getUTCDate() + expiry_days);
+        const features = backup_enabled ? ['pos', 'backup'] : ['pos'];
         const record = {
           license_key,
           company_name,
           plan: 'paid',
-          features: ['pos'],
+          features,
           max_devices,
           expiry: expiry.toISOString(),
           status: 'active',

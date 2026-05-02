@@ -37,6 +37,16 @@ import {
   startTrialInternal,
   submitLicenseKeyInternal,
 } from './license/service';
+import {
+  createAndUploadBackup,
+  restoreBackupFile,
+} from './backup/backupService';
+import {
+  patchBackupState,
+  readBackupState,
+} from './backup/backupStore';
+import { isB2Configured } from './backup/b2Api';
+import { startBackupScheduler } from './backup/scheduler';
 
 export default function registerIpcMainActionListeners(main: Main) {
   const execFileAsync = promisify(execFile);
@@ -384,4 +394,83 @@ export default function registerIpcMainActionListeners(main: Main) {
       return databaseManager.getSchemaMap();
     });
   });
+
+  /**
+   * Google Drive Backup
+   */
+
+  // Start the hourly scheduler once the IPC layer is ready
+  startBackupScheduler(() => main.mainWindow);
+
+  ipcMain.handle(IPC_ACTIONS.BACKUP_IS_CONFIGURED, () => {
+    return isB2Configured();
+  });
+
+  ipcMain.handle(IPC_ACTIONS.BACKUP_GET_STATUS, async () => {
+    return await readBackupState();
+  });
+
+  ipcMain.handle(
+    IPC_ACTIONS.BACKUP_SET_HOUR,
+    async (_, hour: unknown, minute: unknown) => {
+      const h = typeof hour === 'number' ? Math.max(0, Math.min(23, Math.round(hour))) : 2;
+      const m = typeof minute === 'number' ? Math.max(0, Math.min(59, Math.round(minute))) : 0;
+      await patchBackupState({ backupHour: h, backupMinute: m });
+      return { ok: true };
+    }
+  );
+
+  /**
+   * Called by the renderer each time a company DB is opened, so the backup
+   * service knows which file to back up.
+   */
+  ipcMain.handle(
+    IPC_ACTIONS.BACKUP_SET_DB_PATH,
+    async (_, dbPath: unknown, companyName: unknown) => {
+      await patchBackupState({
+        currentDbPath: typeof dbPath === 'string' ? dbPath : null,
+        currentCompanyName:
+          typeof companyName === 'string' ? companyName : null,
+      });
+      return { ok: true };
+    }
+  );
+
+  ipcMain.handle(IPC_ACTIONS.BACKUP_RUN_NOW, async () => {
+    const err = await createAndUploadBackup();
+    if (err) {
+      return { ok: false, error: err };
+    }
+    return { ok: true };
+  });
+
+  /**
+   * Restores a .db.gz backup file: decompresses it and saves the raw SQLite DB
+   * automatically to the user's Documents/Frappe Books folder.
+   * The destination path is returned to the renderer so it can load the company.
+   */
+  ipcMain.handle(
+    IPC_ACTIONS.BACKUP_RESTORE_FILE,
+    async (_, backupGzPath: unknown) => {
+      if (typeof backupGzPath !== 'string') {
+        return { ok: false, error: 'Invalid arguments.' };
+      }
+      try {
+        // Derive a safe destination filename from the archive name.
+        // e.g. "backup-2026-05-02-143000.db.gz" → "backup-2026-05-02-143000.db"
+        const baseName = path.basename(backupGzPath).replace(/\.gz$/i, '');
+        const docsDir = path.join(app.getPath('documents'), 'EDukan');
+        await fs.ensureDir(docsDir);
+        const destPath = path.join(docsDir, baseName);
+
+        await restoreBackupFile(backupGzPath, destPath);
+        return { ok: true, destPath };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    }
+  );
 }

@@ -10,6 +10,10 @@ node_modules
 .env.local
 .env.*.local
 
+# Google service-account credential files (must never be committed)
+*-credentials.json
+edukan-backups-*.json
+
 # Log files
 npm-debug.log*
 yarn-debug.log*
@@ -29,3 +33,4 @@ yarn-error.log*
 /dist_electron
 log_creds.txt
 private_key.pem
+edukan-backups-960fbb861ed9.json

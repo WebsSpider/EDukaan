@@ -49,6 +49,10 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           APPLE_NOTARIZE: 0
+          BACKBLAZE_KEYID: ${{ secrets.BACKBLAZE_KEYID }}
+          BACKBLAZE_APPLICATION_KEY: ${{ secrets.BACKBLAZE_APPLICATION_KEY }}
+          BACKBLAZE_ENDPOINT: ${{ secrets.BACKBLAZE_ENDPOINT }}
+          BACKBLAZE_BUCKET: ${{ secrets.BACKBLAZE_BUCKET }}
         run: ${{ matrix.build_cmd }}
 
       - name: Upload bundled artifacts

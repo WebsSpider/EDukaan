@@ -547,6 +547,10 @@ export function getPageHtml(): string {
       '</select>' +
       '<label>Valid for (days)</label><input type="number" id="nc-days" min="1" max="3650" value="365" style="width:100%;margin-bottom:0.75rem"/>' +
       '<label>Max devices</label><input type="number" id="nc-dev" min="1" max="999" value="1" style="width:100%;margin-bottom:0.75rem"/>' +
+      '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem">' +
+      '<input type="checkbox" id="nc-backup" style="width:auto;margin:0"/>' +
+      '<label for="nc-backup" style="margin:0;color:var(--text);font-size:0.875rem">Enable Google Drive backup</label>' +
+      '</div>' +
       '<div id="nc-err" class="err" hidden></div>' +
       '<button type="button" id="nc-go">Create</button>';
     modalShell.hidden = false;
@@ -559,6 +563,7 @@ export function getPageHtml(): string {
           company_name: $('#nc-name').value.trim() || 'Customer',
           expiry_days: Number($('#nc-days').value) || 365,
           max_devices: Number($('#nc-dev').value) || 1,
+          backup_enabled: $('#nc-backup').checked,
         }),
       });
       if (r.status === 401) {

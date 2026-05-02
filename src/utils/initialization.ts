@@ -33,6 +33,14 @@ export async function initializeInstance(
   await setInstanceId(fyo);
   await setOpenCount(fyo);
   await setCurrencySymbols(fyo);
+
+  // Notify the backup service (main process) about the current DB so it
+  // knows which file to back up and how to name the Drive folder.
+  const companyName =
+    (fyo.singles.AccountingSettings?.companyName as string | undefined) ?? '';
+  if (ipc?.backup?.setDbPath) {
+    ipc.backup.setDbPath(dbPath, companyName).catch(() => undefined);
+  }
 }
 
 async function closeDbIfConnected(fyo: Fyo) {

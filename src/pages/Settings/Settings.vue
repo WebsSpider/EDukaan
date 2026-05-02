@@ -115,7 +115,118 @@
         </div>
       </div>
 
-      <!-- Tab Bar -->
+      <div
+        v-else-if="activeTab === BACKUP_TAB"
+        class="overflow-auto custom-scroll custom-scroll-thumb1 p-4 space-y-4"
+      >
+        <!-- Not configured -->
+        <div v-if="!backupConfigured" class="rounded border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4">
+          <p class="text-sm text-amber-800 dark:text-amber-200">
+            {{ t`BackBlaze B2 backup is not configured on this build. Contact your administrator.` }}
+          </p>
+        </div>
+
+        <!-- No backup license -->
+        <div v-else-if="!backupLicensed" class="rounded border border-gray-200 dark:border-gray-700 p-4">
+          <p class="text-sm text-gray-700 dark:text-gray-300">
+            {{ t`Cloud backup is not included in your current license. Upgrade your license to enable automatic BackBlaze B2 backups.` }}
+          </p>
+        </div>
+
+        <!-- Configured and licensed -->
+        <template v-else>
+          <!-- Status card -->
+          <div class="rounded border border-gray-200 dark:border-gray-700 p-4 space-y-1">
+            <p class="text-sm text-gray-700 dark:text-gray-200">
+              {{ t`Status` }}:
+              <strong :class="{
+                'text-green-600 dark:text-green-400': backupStatus === 'success',
+                'text-red-500': backupStatus === 'error',
+                'text-amber-500': backupStatus === 'offline',
+                'text-gray-500': backupStatus === 'idle' || backupStatus === 'running',
+              }">{{ backupStatusLabel }}</strong>
+            </p>
+            <p v-if="backupLastSuccess" class="text-sm text-gray-700 dark:text-gray-200">
+              {{ t`Last successful backup` }}: <strong>{{ backupLastSuccess }}</strong>
+            </p>
+            <p v-if="backupError" class="text-sm text-red-600 dark:text-red-400 break-all">
+              {{ t`Error` }}: {{ backupError }}
+            </p>
+          </div>
+
+          <!-- Backup time scheduler -->
+          <div class="rounded border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <p class="text-sm font-medium text-gray-800 dark:text-gray-100">
+              {{ t`Daily backup time` }}
+            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              {{ t`Next automatic backup` }}:
+              <strong class="text-gray-800 dark:text-gray-100">{{ nextBackupLabel }}</strong>
+            </p>
+            <!-- Single-row time picker: Hour : Minute  AM/PM  [Update] -->
+            <div class="flex items-center gap-2">
+              <!-- Hour 1–12 -->
+              <select
+                v-model.number="backupHour12"
+                class="w-16 p-2 border rounded bg-white text-gray-900 border-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 text-center"
+              >
+                <option v-for="h in 12" :key="h" :value="h">{{ String(h).padStart(2, '0') }}</option>
+              </select>
+
+              <span class="text-gray-500 dark:text-gray-400 font-semibold text-lg select-none">:</span>
+
+              <!-- Minute 00–59 -->
+              <select
+                v-model.number="backupMinute"
+                class="w-16 p-2 border rounded bg-white text-gray-900 border-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 text-center"
+              >
+                <option v-for="m in minuteOptions" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
+              </select>
+
+              <!-- AM / PM -->
+              <select
+                v-model="backupAmPm"
+                class="w-20 p-2 border rounded bg-white text-gray-900 border-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 text-center"
+              >
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+
+              <!-- Update button -->
+              <Button
+                type="primary"
+                :disabled="!backupTimeChanged"
+                @click="saveBackupTime"
+              >
+                {{ t`Update` }}
+              </Button>
+            </div>
+            <p v-if="backupTimeSaved" class="text-xs text-green-600 dark:text-green-400">
+              {{ t`Backup time updated.` }}
+            </p>
+          </div>
+
+          <!-- Manual run -->
+          <div class="rounded border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <p class="text-sm font-medium text-gray-800 dark:text-gray-100">
+              {{ t`Manual Backup` }}
+            </p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              {{ t`Run a backup right now and upload it to Cloud.` }}
+            </p>
+            <p v-if="backupUsedToday && !backupRunning" class="text-xs text-amber-600 dark:text-amber-400">
+              {{ t`A backup has already been run today. Manual backup will be available again tomorrow.` }}
+            </p>
+            <Button
+              type="primary"
+              :disabled="backupRunning || backupUsedToday"
+              @click="runBackupNow"
+            >
+              {{ backupRunning ? t`Backing up…` : t`Backup Now` }}
+            </Button>
+          </div>
+        </template>
+      </div>
       <div
         v-if="settingsTabKeys.length > 1"
         class="
@@ -176,6 +287,7 @@ import CommonFormSection from '../CommonForm/CommonFormSection.vue';
 
 const COMPONENT_NAME = 'Settings';
 const LICENSE_TAB = '__license__';
+const BACKUP_TAB = '__backup__';
 export default defineComponent({
   components: { FormContainer, Button, FormHeader, CommonFormSection },
   provide() {
@@ -196,6 +308,22 @@ export default defineComponent({
       licenseStatusMessage: '',
       licenseExpiryLabel: '-',
       licenseModeLabel: '-',
+      // Backup tab
+      backupConfigured: false,
+      backupLicensed: false,
+      backupStatus: 'idle' as string,
+      backupLastSuccess: '' as string,
+      backupError: '' as string,
+      /** 12-hour clock picker values */
+      backupHour12: 2,
+      backupMinute: 0,
+      backupAmPm: 'AM' as 'AM' | 'PM',
+      /** Saved values (24h) — used to detect unsaved changes */
+      savedBackupHour: 2,
+      savedBackupMinute: 0,
+      backupRunning: false,
+      backupTimeSaved: false,
+      lastAttemptDateLocal: null as string | null,
     } as {
       errors: Record<string, string>;
       activeTab: string;
@@ -205,14 +333,30 @@ export default defineComponent({
       licenseStatusMessage: string;
       licenseExpiryLabel: string;
       licenseModeLabel: string;
+      backupConfigured: boolean;
+      backupLicensed: boolean;
+      backupStatus: string;
+      backupLastSuccess: string;
+      backupError: string;
+      backupHour12: number;
+      backupMinute: number;
+      backupAmPm: 'AM' | 'PM';
+      savedBackupHour: number;
+      savedBackupMinute: number;
+      backupRunning: boolean;
+      backupTimeSaved: boolean;
+      lastAttemptDateLocal: string | null;
     };
   },
   computed: {
     LICENSE_TAB() {
       return LICENSE_TAB;
     },
+    BACKUP_TAB() {
+      return BACKUP_TAB;
+    },
     canSave() {
-      if (this.activeTab === LICENSE_TAB) {
+      if (this.activeTab === LICENSE_TAB || this.activeTab === BACKUP_TAB) {
         return false;
       }
       return [
@@ -232,8 +376,7 @@ export default defineComponent({
       }
 
       return doc;
-    },
-    tabLabels(): Record<string, string> {
+    },    tabLabels(): Record<string, string> {
       return {
         [ModelNameEnum.AccountingSettings]: this.t`General`,
         [ModelNameEnum.PrintSettings]: this.t`Print`,
@@ -243,6 +386,7 @@ export default defineComponent({
         [ModelNameEnum.ERPNextSyncSettings]: this.t`ERPNext Sync`,
         [ModelNameEnum.SystemSettings]: this.t`System`,
         [LICENSE_TAB]: this.t`License`,
+        [BACKUP_TAB]: this.t`Backup`,
       };
     },
     schemas(): Schema[] {
@@ -296,6 +440,7 @@ export default defineComponent({
         ModelNameEnum.PrintSettings,
         ModelNameEnum.SystemSettings,
         LICENSE_TAB,
+        BACKUP_TAB,
       ];
 
       return keys.filter((s) => {
@@ -331,11 +476,90 @@ export default defineComponent({
 
       return group;
     },
+    backupStatusLabel(): string {
+      const map: Record<string, string> = {
+        idle: this.t`Idle`,
+        running: this.t`Running…`,
+        success: this.t`Success`,
+        error: this.t`Error`,
+        offline: this.t`Offline (upload skipped)`,
+      };
+      return map[this.backupStatus] ?? this.backupStatus;
+    },
+    backupTimeChanged(): boolean {
+      const h24 =
+        this.backupAmPm === 'AM'
+          ? this.backupHour12 % 12
+          : (this.backupHour12 % 12) + 12;
+      return (
+        h24 !== this.savedBackupHour ||
+        this.backupMinute !== this.savedBackupMinute
+      );
+    },
+    backupUsedToday(): boolean {
+      if (!this.lastAttemptDateLocal) {
+        return false;
+      }
+      const now = new Date();
+      const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0'),
+      ].join('-');
+      return this.lastAttemptDateLocal === today;
+    },
+    minuteOptions(): number[] {
+      const opts: number[] = [];
+      for (let m = 0; m < 60; m++) {
+        opts.push(m);
+      }
+      return opts;
+    },
+    nextBackupLabel(): string {
+      const now = new Date();
+      const h = this.savedBackupHour;
+      const m = this.savedBackupMinute;
+
+      const todayBackup = new Date(now);
+      todayBackup.setHours(h, m, 0, 0);
+
+      let next: Date;
+      const todayStr = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0'),
+      ].join('-');
+
+      if (this.lastAttemptDateLocal === todayStr || now >= todayBackup) {
+        next = new Date(todayBackup);
+        next.setDate(next.getDate() + 1);
+      } else {
+        next = todayBackup;
+      }
+
+      const isToday = next.toDateString() === now.toDateString();
+      const isTomorrow =
+        next.toDateString() ===
+        new Date(now.getTime() + 86400000).toDateString();
+
+      const timeStr = next.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      if (isToday) return `${this.t`Today`} ${this.t`at`} ${timeStr}`;
+      if (isTomorrow) return `${this.t`Tomorrow`} ${this.t`at`} ${timeStr}`;
+      return next.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    },
   },
   watch: {
     activeTab(value: string) {
       if (value === LICENSE_TAB) {
         void this.refreshLicenseStatus();
+        return;
+      }
+      if (value === BACKUP_TAB) {
+        void this.refreshBackupStatus();
         return;
       }
     },
@@ -494,6 +718,67 @@ export default defineComponent({
 
       this.update();
     },
+    // Backup methods
+    async refreshBackupStatus(): Promise<void> {
+      this.backupConfigured = await ipc.backup.isConfigured();
+      if (!this.backupConfigured) {
+        return;
+      }
+
+      const licStatus = await ipc.license.getStatus();
+      this.backupLicensed = Array.isArray(licStatus.features)
+        ? licStatus.features.includes('backup')
+        : false;
+
+      if (!this.backupLicensed) {
+        return;
+      }
+
+      const state = await ipc.backup.getStatus();
+      this.backupStatus = state.lastStatus ?? 'idle';
+      const h24 = typeof state.backupHour === 'number' ? state.backupHour : 2;
+      this.backupMinute = typeof state.backupMinute === 'number' ? state.backupMinute : 0;
+      this.savedBackupHour = h24;
+      this.savedBackupMinute = this.backupMinute;
+      // Derive 12-hour picker values from the stored 24-hour value
+      this.backupHour12 = h24 % 12 === 0 ? 12 : h24 % 12;
+      this.backupAmPm = h24 < 12 ? 'AM' : 'PM';
+      this.lastAttemptDateLocal = state.lastAttemptDateLocal ?? null;
+      this.backupLastSuccess = state.lastSuccessAtIso
+        ? new Date(state.lastSuccessAtIso).toLocaleString()
+        : '';
+      this.backupError = state.lastErrorMessage ?? '';
+    },
+    async saveBackupTime(): Promise<void> {
+      const h24 =
+        this.backupAmPm === 'AM'
+          ? this.backupHour12 % 12
+          : (this.backupHour12 % 12) + 12;
+      await ipc.backup.setTime(h24, this.backupMinute);
+      this.savedBackupHour = h24;
+      this.savedBackupMinute = this.backupMinute;
+      this.backupTimeSaved = true;
+      setTimeout(() => { this.backupTimeSaved = false; }, 3000);
+    },
+    async runBackupNow(): Promise<void> {
+      this.backupRunning = true;
+      this.backupError = '';
+      try {
+        const res = await ipc.backup.runNow();
+        if (!res.ok) {
+          this.backupError = res.error ?? this.t`Unknown error`;
+          this.backupStatus = 'error';
+        } else {
+          this.backupStatus = 'success';
+          this.backupLastSuccess = new Date().toLocaleString();
+        }
+        // Refresh persisted state so backupUsedToday reflects the attempt
+        const state = await ipc.backup.getStatus();
+        this.lastAttemptDateLocal = state.lastAttemptDateLocal ?? null;
+      } finally {
+        this.backupRunning = false;
+      }
+    },
     async sync(): Promise<void> {
       const syncableDocs = this.schemas
         .map(({ name }) => this.fyo.singles[name])
@@ -550,6 +835,9 @@ export default defineComponent({
       this.updateGroupedFields();
       if (this.activeTab === LICENSE_TAB) {
         void this.refreshLicenseStatus();
+      }
+      if (this.activeTab === BACKUP_TAB) {
+        void this.refreshBackupStatus();
       }
     },
     updateGroupedFields(): void {

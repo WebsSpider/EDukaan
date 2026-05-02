@@ -1,6 +1,7 @@
 import { handleError } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import { syncDocumentsToERPNext } from 'src/utils/erpnextSync';
+import { showToast } from 'src/utils/interactive';
 
 export default function registerIpcRendererListeners() {
   ipc.registerMainProcessErrorListener(
@@ -40,6 +41,22 @@ export default function registerIpcRendererListeners() {
       console.log(...stuff);
     }
   });
+
+  // Forward backup toast notifications from the main process to the in-app
+  // toast system so the user is informed about offline / error states.
+  ipc.registerBackupToastListener(
+    (_: unknown, payload: { message: string; type: 'warning' | 'error' }) => {
+      if (!payload?.message) {
+        return;
+      }
+
+      showToast({
+        type: payload.type === 'error' ? 'error' : 'warning',
+        message: payload.message,
+        duration: 'long',
+      });
+    }
+  );
 
   document.addEventListener('visibilitychange', () => {
     const { visibilityState } = document;

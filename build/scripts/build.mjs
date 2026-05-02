@@ -8,7 +8,12 @@ import * as vite from 'vite';
 import { getMainProcessCommonConfig } from './helpers.mjs';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
+import dotenv from 'dotenv';
 import frappeBooksConfig from '../../electron-builder-config.mjs';
+
+// Load .env for local secrets (e.g. EDUKAN_GDRIVE_CREDENTIALS_JSON).
+// In CI these are injected as real environment variables, so this is a no-op.
+dotenv.config();
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(dirname, '..', '..');

@@ -35,6 +35,8 @@ export type LicenseGetStatusResult = {
   licenseServerMessage?: string | null;
   /** Current local license expiry timestamp (trial or paid). */
   licenseExpiryAtIso?: string | null;
+  /** Feature flags from the signed license (e.g. ['pos', 'backup']). */
+  features?: string[];
 };
 
 export type LicenseStartTrialResult =

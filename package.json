@@ -1,10 +1,10 @@
 {
   "name": "edukan",
-  "version": "0.1.2",
+  "version": "0.1.10",
   "description": "Simple book-keeping app for everyone",
   "author": {
-    "name": "Frappe Technologies Pvt. Ltd.",
-    "email": "hello@frappe.io"
+    "name": "Aurobotix",
+    "email": "info@aurobotix.com"
   },
   "scripts": {
     "dev": "node build/scripts/dev.mjs",

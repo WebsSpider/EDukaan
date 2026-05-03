@@ -38,7 +38,6 @@ import {
   submitLicenseKeyInternal,
 } from './license/service';
 import {
-  createAndUploadBackup,
   restoreBackupFile,
 } from './backup/backupService';
 import {
@@ -46,7 +45,7 @@ import {
   readBackupState,
 } from './backup/backupStore';
 import { isB2Configured } from './backup/b2Api';
-import { startBackupScheduler } from './backup/scheduler';
+import { runBackupWithNotifications, startBackupScheduler } from './backup/scheduler';
 
 export default function registerIpcMainActionListeners(main: Main) {
   const execFileAsync = promisify(execFile);
@@ -415,7 +414,10 @@ export default function registerIpcMainActionListeners(main: Main) {
     async (_, hour: unknown, minute: unknown) => {
       const h = typeof hour === 'number' ? Math.max(0, Math.min(23, Math.round(hour))) : 2;
       const m = typeof minute === 'number' ? Math.max(0, Math.min(59, Math.round(minute))) : 0;
-      await patchBackupState({ backupHour: h, backupMinute: m });
+      // Clearing lastAttemptDateLocal lets the scheduler fire at the new time
+      // today if it hasn't already passed, and also allows the user to test
+      // by setting a time a few minutes in the future.
+      await patchBackupState({ backupHour: h, backupMinute: m, lastAttemptDateLocal: null });
       return { ok: true };
     }
   );
@@ -437,11 +439,7 @@ export default function registerIpcMainActionListeners(main: Main) {
   );
 
   ipcMain.handle(IPC_ACTIONS.BACKUP_RUN_NOW, async () => {
-    const err = await createAndUploadBackup();
-    if (err) {
-      return { ok: false, error: err };
-    }
-    return { ok: true };
+    return await runBackupWithNotifications();
   });
 
   /**

@@ -14,7 +14,9 @@ export type BackupState = {
   backupMinute: number;
   /** ISO timestamp of the last successful backup upload. */
   lastSuccessAtIso: string | null;
-  /** Date string (YYYY-MM-DD) of the last day a backup was attempted. */
+  /** Date string (YYYY-MM-DD) of the last day a backup completed successfully. */
+  lastSuccessDateLocal: string | null;
+  /** Date string (YYYY-MM-DD) of the last day a backup was attempted (any outcome). */
   lastAttemptDateLocal: string | null;
   /** Last known status. */
   lastStatus: BackupStatus;
@@ -36,6 +38,7 @@ function defaultState(): BackupState {
     backupHour: 2,
     backupMinute: 0,
     lastSuccessAtIso: null,
+    lastSuccessDateLocal: null,
     lastAttemptDateLocal: null,
     lastStatus: 'idle',
     lastErrorMessage: null,

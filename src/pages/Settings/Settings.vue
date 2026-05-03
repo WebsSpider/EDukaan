@@ -136,17 +136,27 @@
         <!-- Configured and licensed -->
         <template v-else>
           <!-- Status card -->
-          <div class="rounded border border-gray-200 dark:border-gray-700 p-4 space-y-1">
-            <p class="text-sm text-gray-700 dark:text-gray-200">
-              {{ t`Status` }}:
-              <strong :class="{
-                'text-green-600 dark:text-green-400': backupStatus === 'success',
-                'text-red-500': backupStatus === 'error',
-                'text-amber-500': backupStatus === 'offline',
-                'text-gray-500': backupStatus === 'idle' || backupStatus === 'running',
-              }">{{ backupStatusLabel }}</strong>
+          <div :class="[
+            'rounded border p-4 space-y-2',
+            backupStatus === 'success'
+              ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20'
+              : backupStatus === 'error'
+              ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20'
+              : backupStatus === 'offline'
+              ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20'
+              : 'border-gray-200 dark:border-gray-700'
+          ]">
+            <p class="flex items-center gap-2">
+              <span class="text-sm text-gray-500 dark:text-gray-400">{{ t`Status` }}</span>
+              <strong :class="[
+                'text-base font-semibold',
+                backupStatus === 'success' ? 'text-green-600 dark:text-green-400' :
+                backupStatus === 'error'   ? 'text-red-500 dark:text-red-400'     :
+                backupStatus === 'offline' ? 'text-amber-500 dark:text-amber-400' :
+                'text-gray-500 dark:text-gray-400'
+              ]">{{ backupStatusLabel }}</strong>
             </p>
-            <p v-if="backupLastSuccess" class="text-sm text-gray-700 dark:text-gray-200">
+            <p v-if="backupLastSuccess" class="text-sm text-gray-600 dark:text-gray-300">
               {{ t`Last successful backup` }}: <strong>{{ backupLastSuccess }}</strong>
             </p>
             <p v-if="backupError" class="text-sm text-red-600 dark:text-red-400 break-all">
@@ -324,6 +334,7 @@ export default defineComponent({
       backupRunning: false,
       backupTimeSaved: false,
       lastAttemptDateLocal: null as string | null,
+      lastSuccessDateLocal: null as string | null,
     } as {
       errors: Record<string, string>;
       activeTab: string;
@@ -346,6 +357,7 @@ export default defineComponent({
       backupRunning: boolean;
       backupTimeSaved: boolean;
       lastAttemptDateLocal: string | null;
+      lastSuccessDateLocal: string | null;
     };
   },
   computed: {
@@ -497,7 +509,7 @@ export default defineComponent({
       );
     },
     backupUsedToday(): boolean {
-      if (!this.lastAttemptDateLocal) {
+      if (!this.lastSuccessDateLocal) {
         return false;
       }
       const now = new Date();
@@ -506,7 +518,7 @@ export default defineComponent({
         String(now.getMonth() + 1).padStart(2, '0'),
         String(now.getDate()).padStart(2, '0'),
       ].join('-');
-      return this.lastAttemptDateLocal === today;
+      return this.lastSuccessDateLocal === today;
     },
     minuteOptions(): number[] {
       const opts: number[] = [];
@@ -744,6 +756,7 @@ export default defineComponent({
       this.backupHour12 = h24 % 12 === 0 ? 12 : h24 % 12;
       this.backupAmPm = h24 < 12 ? 'AM' : 'PM';
       this.lastAttemptDateLocal = state.lastAttemptDateLocal ?? null;
+      this.lastSuccessDateLocal = state.lastSuccessDateLocal ?? null;
       this.backupLastSuccess = state.lastSuccessAtIso
         ? new Date(state.lastSuccessAtIso).toLocaleString()
         : '';

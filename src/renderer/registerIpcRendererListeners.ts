@@ -45,15 +45,18 @@ export default function registerIpcRendererListeners() {
   // Forward backup toast notifications from the main process to the in-app
   // toast system so the user is informed about offline / error states.
   ipc.registerBackupToastListener(
-    (_: unknown, payload: { message: string; type: 'warning' | 'error' }) => {
+    (
+      _: unknown,
+      payload: { message: string; type: 'info' | 'warning' | 'error' | 'success' }
+    ) => {
       if (!payload?.message) {
         return;
       }
 
       showToast({
-        type: payload.type === 'error' ? 'error' : 'warning',
+        type: payload.type ?? 'info',
         message: payload.message,
-        duration: 'long',
+        duration: payload.type === 'info' ? 'short' : 'long',
       });
     }
   );

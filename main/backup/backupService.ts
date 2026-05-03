@@ -11,6 +11,7 @@
  * Licensing: only runs when the signed license includes the "backup" feature.
  */
 
+import { pipeline } from 'stream/promises';
 import zlib from 'zlib';
 import os from 'os';
 import path from 'path';
@@ -48,17 +49,11 @@ export async function hasBackupFeature(): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 function gzipFile(src: string, dest: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const input = fs.createReadStream(src);
-    const output = fs.createWriteStream(dest);
-    const gz = zlib.createGzip({ level: zlib.constants.Z_BEST_COMPRESSION });
-
-    input.on('error', reject);
-    output.on('error', reject);
-    output.on('close', resolve);
-
-    input.pipe(gz).pipe(output);
-  });
+  return pipeline(
+    fs.createReadStream(src),
+    zlib.createGzip({ level: zlib.constants.Z_BEST_COMPRESSION }),
+    fs.createWriteStream(dest)
+  );
 }
 
 function gunzipBuffer(buf: Buffer): Promise<Buffer> {
@@ -136,6 +131,7 @@ export async function createAndUploadBackup(): Promise<string | null> {
     await patchBackupState({
       lastStatus: 'success',
       lastSuccessAtIso: new Date().toISOString(),
+      lastSuccessDateLocal: today,
       lastAttemptDateLocal: today,
       lastErrorMessage: null,
     });
@@ -144,7 +140,7 @@ export async function createAndUploadBackup(): Promise<string | null> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const isOffline =
-      /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|fetch failed|getaddrinfo/i.test(
+      /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|EPIPE|fetch failed|getaddrinfo/i.test(
         msg
       );
 

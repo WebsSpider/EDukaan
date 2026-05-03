@@ -67,6 +67,8 @@ function createClient(): S3Client {
     credentials: { accessKeyId: keyId, secretAccessKey: appKey },
     // Required for B2: path-style URLs (https://endpoint/bucket/key)
     forcePathStyle: true,
+    // Retry up to 3 times on transient network errors (EPIPE, ECONNRESET, etc.)
+    maxAttempts: 3,
   });
 }
 
@@ -91,6 +93,10 @@ export async function uploadObject(opts: {
       Key: opts.key,
       Body: opts.body,
       ContentType: opts.contentType ?? 'application/octet-stream',
+      // Explicitly set ContentLength so B2 receives a non-chunked upload.
+      // Without this the AWS SDK uses chunked transfer encoding which B2 can
+      // reject mid-stream, producing a "write EPIPE" error.
+      ContentLength: opts.body.length,
     })
   );
 }

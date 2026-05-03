@@ -1,7 +1,7 @@
 /**
- * Backup scheduler: checks once per hour whether the configured backup hour
- * has arrived and no backup has run today.  Sends a toast to the renderer on
- * offline failure.
+ * Backup scheduler: checks once per minute whether the configured backup time
+ * has arrived and no backup has run today.  Sends toasts to the renderer for
+ * all backup lifecycle events (running, success, offline, error).
  */
 
 import type { BrowserWindow } from 'electron';
@@ -15,7 +15,7 @@ let _timer: ReturnType<typeof setInterval> | null = null;
 let _getWindow: (() => BrowserWindow | null) | null = null;
 
 /**
- * Start the hourly scheduler.
+ * Start the backup scheduler.
  * `getWindow` is called lazily so that a window reference is never stale.
  */
 export function startBackupScheduler(
@@ -46,7 +46,43 @@ export function stopBackupScheduler(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Internal
+// Shared run function — used by both the scheduler and the manual IPC handler
+// so both paths are identical.
+// ---------------------------------------------------------------------------
+
+/**
+ * Runs the full backup pipeline, sends user-visible toasts for every outcome,
+ * and returns `{ ok, error }` so callers (IPC handler) can relay the result.
+ */
+export async function runBackupWithNotifications(): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  sendToastToRenderer('Backup is running…', 'info');
+
+  const err = await createAndUploadBackup();
+
+  if (err) {
+    const updatedState = await readBackupState();
+    const isOffline = updatedState.lastStatus === 'offline';
+    const state = await readBackupState();
+
+    sendToastToRenderer(
+      isOffline
+        ? `Backup skipped: device is offline. It will retry tomorrow at ${formatTime(state.backupHour, state.backupMinute ?? 0)}.`
+        : `Backup failed: ${err}`,
+      isOffline ? 'warning' : 'error'
+    );
+
+    return { ok: false, error: err };
+  }
+
+  sendToastToRenderer('Backup completed successfully!', 'success');
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Scheduler tick
 // ---------------------------------------------------------------------------
 
 async function checkAndRunBackup(): Promise<void> {
@@ -64,40 +100,36 @@ async function checkAndRunBackup(): Promise<void> {
     return;
   }
 
-  const currentHour = new Date().getHours();
-  const currentMinute = new Date().getMinutes();
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
   const today = todayLocal();
 
-  // Only run if we're at the configured hour:minute and haven't run today yet.
-  if (
-    currentHour !== state.backupHour ||
-    currentMinute !== (state.backupMinute ?? 0) ||
-    state.lastAttemptDateLocal === today
-  ) {
+  // Convert both times to minutes-since-midnight for a simple >= comparison.
+  // Using >= (not ===) so a missed tick (timer drift) doesn't skip the backup —
+  // the check fires on the next tick and still runs as long as it hasn't yet
+  // run today.
+  const nowMinutes = currentHour * 60 + currentMinute;
+  const scheduledMinutes = state.backupHour * 60 + (state.backupMinute ?? 0);
+
+  if (nowMinutes < scheduledMinutes || state.lastAttemptDateLocal === today) {
     return;
   }
 
-  // Mark attempt so parallel checks don't double-fire
+  // Mark attempt immediately so parallel ticks don't double-fire.
   await patchBackupState({ lastAttemptDateLocal: today });
 
-  const err = await createAndUploadBackup();
-
-  if (err) {
-    const updatedState = await readBackupState();
-    const isOffline = updatedState.lastStatus === 'offline';
-
-    sendToastToRenderer(
-      isOffline
-        ? `Backup skipped: device is offline. It will retry tomorrow at ${formatTime(state.backupHour, state.backupMinute ?? 0)}.`
-        : `Backup failed: ${err}`,
-      isOffline ? 'warning' : 'error'
-    );
-  }
+  // Delegate to the shared function — identical to what "Backup Now" runs.
+  await runBackupWithNotifications();
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function sendToastToRenderer(
   message: string,
-  type: 'warning' | 'error'
+  type: 'info' | 'warning' | 'error' | 'success'
 ): void {
   const win = _getWindow?.();
   if (!win || win.isDestroyed()) {

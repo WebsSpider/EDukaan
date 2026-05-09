@@ -63,6 +63,14 @@
       >
         {{ t`Payment` }}
       </Button>
+      <Button
+        v-if="canShowInvoiceReturnButton"
+        type="primary"
+        :title="t`Create a return invoice for this paid invoice`"
+        @click="doInvoiceReturn"
+      >
+        {{ t`Return` }}
+      </Button>
       <DropdownWithActions
         v-for="group of groupedActions"
         :key="group.label"
@@ -480,6 +488,33 @@ export default defineComponent({
 
       return true;
     },
+    canShowInvoiceReturnButton(): boolean {
+      if (!this.hasDoc || !(this.doc instanceof Invoice)) {
+        return false;
+      }
+
+      if (
+        this.schemaName !== ModelNameEnum.SalesInvoice &&
+        this.schemaName !== ModelNameEnum.PurchaseInvoice
+      ) {
+        return false;
+      }
+
+      if (!this.fyo.singles.AccountingSettings?.enableInvoiceReturns) {
+        return false;
+      }
+
+      if (!this.doc.isSubmitted || this.doc.isReturn) {
+        return false;
+      }
+
+      const outstanding = this.doc.outstandingAmount as Money | undefined;
+      if (!outstanding || !outstanding.isZero()) {
+        return false;
+      }
+
+      return true;
+    },
   },
   beforeMount() {
     this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
@@ -557,6 +592,18 @@ export default defineComponent({
       }
 
       await openInvoicePayment(this.doc, this.$router);
+    },
+    async doInvoiceReturn() {
+      if (!this.hasDoc || !(this.doc instanceof Invoice)) {
+        return;
+      }
+
+      const returnDoc = await this.doc.getReturnDoc();
+      if (!returnDoc?.name) {
+        return;
+      }
+
+      await routeTo(`/edit/${this.schemaName}/${returnDoc.name}`);
     },
     async toggleWidth() {
       const value = !this.useFullWidth;

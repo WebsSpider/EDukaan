@@ -543,8 +543,9 @@ export default defineComponent({
       )) as POSProfile;
     },
 
-    async handleItemSearch(searchTerm: string, addItem?: boolean) {
-      const normalizedSearchTerm = searchTerm.trim();
+    async handleItemSearch(searchTerm?: string | null, addItem?: boolean) {
+      const normalizedSearchTerm =
+        typeof searchTerm === 'string' ? searchTerm.trim() : '';
       this.itemSearchTerm = normalizedSearchTerm;
       if (!addItem) return;
       if (!normalizedSearchTerm) return;
@@ -925,7 +926,6 @@ export default defineComponent({
         const itemRate = this.fyo.pesa(
           `${(item.rate as Money | number | undefined)?.toString?.() ?? item.rate ?? 0}`
         );
-
         if (item.hasBatch) {
           this.selectedItemForBatch = itemName;
           this.pendingBatchItem = { item, quantity: quantity ?? 1 };

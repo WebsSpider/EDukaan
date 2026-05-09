@@ -272,7 +272,6 @@ export class Item extends Doc {
     batchSeries: () => !this.hasBatch,
     uomConversions: () =>
       !this.fyo.singles.InventorySettings?.enableUomConversions,
-    itemGroup: () => !this.fyo.singles.AccountingSettings?.enableitemGroup,
   };
 
   readOnly: ReadOnlyMap = {

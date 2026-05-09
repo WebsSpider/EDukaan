@@ -31,7 +31,8 @@
       "fieldtype": "Link",
       "target": "ItemGroup",
       "create": true,
-      "placeholder": "Item Group"
+      "placeholder": "Item Group",
+      "section": "Default"
     },
     {
       "fieldname": "for",

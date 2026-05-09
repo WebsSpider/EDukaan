@@ -860,6 +860,8 @@ export default defineComponent({
         return false;
       }
 
+      await this.createMissingItemGroups();
+
       const absentLinks = await this.importer.checkLinks();
       if (absentLinks.length) {
         await showDialog({
@@ -873,6 +875,35 @@ export default defineComponent({
       }
 
       return true;
+    },
+    async createMissingItemGroups(): Promise<void> {
+      if (this.importType !== ModelNameEnum.Item) {
+        return;
+      }
+
+      const absentLinks = await this.importer.checkLinks();
+      const missingItemGroups = absentLinks.filter(
+        (link) => link.schemaName === ModelNameEnum.ItemGroup
+      );
+
+      if (!missingItemGroups.length) {
+        return;
+      }
+
+      const uniqueMissingItemGroups = [...new Set(missingItemGroups.map((l) => l.name))]
+        .map((name) => name.trim())
+        .filter(Boolean);
+
+      for (const itemGroup of uniqueMissingItemGroups) {
+        const alreadyExists = await this.fyo.db.exists(ModelNameEnum.ItemGroup, itemGroup);
+        if (alreadyExists) {
+          continue;
+        }
+
+        await this.fyo.doc
+          .getNewDoc(ModelNameEnum.ItemGroup, { name: itemGroup }, false)
+          .sync();
+      }
     },
     async importData(): Promise<void> {
       const isValid = await this.preImportValidations();

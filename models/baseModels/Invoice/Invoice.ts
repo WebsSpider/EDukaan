@@ -1153,11 +1153,29 @@ export abstract class Invoice extends Transactional {
   formulas: FormulaMap = {
     account: {
       formula: async () => {
-        return (await this.fyo.getValue(
+        const partyDefaultAccount = (await this.fyo.getValue(
           'Party',
           this.party!,
           'defaultAccount'
-        )) as string;
+        )) as string | undefined;
+
+        if (partyDefaultAccount) {
+          return partyDefaultAccount;
+        }
+
+        if (this.schemaName === ModelNameEnum.SalesInvoice) {
+          const posDefaultAccount = this.fyo.singles.POSSettings?.defaultAccount;
+          if (posDefaultAccount) {
+            return posDefaultAccount;
+          }
+
+          const debtorsExists = await this.fyo.db.exists('Account', 'Debtors');
+          if (debtorsExists) {
+            return 'Debtors';
+          }
+        }
+
+        return '';
       },
       dependsOn: ['party'],
     },

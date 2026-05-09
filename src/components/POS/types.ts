@@ -61,5 +61,4 @@ export interface POSItem {
   unit: string;
   hasBatch: boolean;
   hasSerialNumber: boolean;
-  itemGroup?: string;
 }

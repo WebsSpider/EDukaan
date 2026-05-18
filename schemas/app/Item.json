@@ -32,6 +32,7 @@
       "target": "ItemGroup",
       "create": true,
       "placeholder": "Item Group",
+      "required": true,
       "section": "Default"
     },
     {

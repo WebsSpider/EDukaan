@@ -310,56 +310,71 @@
         style="height: calc(100vh - 6rem)"
       >
         <div class="rounded-md p-4 col-span-5">
-          <div class="flex gap-x-2">
-            <!-- Item Search -->
-            <MultiLabelLink
-              class="w-full"
-              secondary-link="barcode"
-              third-link="itemCode"
-              :df="{
-                label: t`Search Item (Name or
-            Barcode)`,
-                fieldtype: 'Link',
-                fieldname: 'item',
-                target: 'Item',
-              }"
-              :border="true"
-              :value="itemSearchTerm"
-              :show-clear-button="true"
-              @keyup.enter="() => emitEvent('handleItemSearch', itemSearchTerm, true)"
-              @change="(item: string) => emitEvent('handleItemSearch', item, true)"
+          <!-- Quick Entry Mode: show entry bar, hide item search/grid -->
+          <template v-if="enableQuickEntry">
+            <div class="flex items-center justify-center mb-4">
+              <QuickEntryBar
+                ref="quickEntryBar"
+                @quick-entry-add="
+                  (code, qty, price) =>
+                    emitEvent('quickEntryAdd', code, qty, price)
+                "
+              />
+            </div>
+          </template>
+
+          <!-- Normal Mode: item search + grid/table -->
+          <template v-else>
+            <div class="flex gap-x-2">
+              <!-- Item Search -->
+              <MultiLabelLink
+                class="w-full"
+                secondary-link="barcode"
+                third-link="itemCode"
+                :df="{
+                  label: t`Search Item (Name or Barcode)`,
+                  fieldtype: 'Link',
+                  fieldname: 'item',
+                  target: 'Item',
+                }"
+                :border="true"
+                :value="itemSearchTerm"
+                :show-clear-button="true"
+                @keyup.enter="() => emitEvent('handleItemSearch', itemSearchTerm, true)"
+                @change="(item: string) => emitEvent('handleItemSearch', item, true)"
+              />
+
+              <Link
+                v-if="fyo.singles.AccountingSettings?.enableitemGroup"
+                :df="{
+                  label: t`Filter by Group`,
+                  fieldtype: 'Link',
+                  fieldname: 'itemGroup',
+                  target: 'ItemGroup',
+                }"
+                :border="true"
+                :show-clear-button="true"
+                :value="selectedItemGroup"
+                @change="(group: string) => emitEvent('setItemGroup',group)"
+              />
+            </div>
+
+            <ModernPOSItemsTable
+              v-if="tableView"
+              :items="items"
+              :item-qty-map="itemQuantityMap as ItemQtyMap"
+              :item-visibility="itemVisibility"
+              @add-item="(item:string) => emitEvent('addItem', item)"
             />
 
-            <Link
-              v-if="fyo.singles.AccountingSettings?.enableitemGroup"
-              :df="{
-                label: t`Filter by Group`,
-                fieldtype: 'Link',
-                fieldname: 'itemGroup',
-                target: 'ItemGroup',
-              }"
-              :border="true"
-              :show-clear-button="true"
-              :value="selectedItemGroup"
-              @change="(group: string) => emitEvent('setItemGroup',group)"
+            <ModernPOSItemsGrid
+              v-else
+              :items="items"
+              :item-qty-map="itemQuantityMap as ItemQtyMap"
+              :item-visibility="itemVisibility"
+              @add-item="(item:string) => emitEvent('addItem', item)"
             />
-          </div>
-
-          <ModernPOSItemsTable
-            v-if="tableView"
-            :items="items"
-            :item-qty-map="itemQuantityMap as ItemQtyMap"
-            :item-visibility="itemVisibility"
-            @add-item="(item:string) => emitEvent('addItem', item)"
-          />
-
-          <ModernPOSItemsGrid
-            v-else
-            :items="items"
-            :item-qty-map="itemQuantityMap as ItemQtyMap"
-            :item-visibility="itemVisibility"
-            @add-item="(item:string) => emitEvent('addItem', item)"
-          />
+          </template>
 
           <div class="flex fixed bottom-0 p-1 ml-3 mb-7 gap-x-3">
             <POSQuickActions
@@ -411,6 +426,7 @@ import FloatingLabelCurrencyInput from 'src/components/POS/FloatingLabelCurrency
 import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import ModernPOSSelectedItemTable from 'src/components/POS/Modern/ModernPOSSelectedItemTable.vue';
 import BatchSelectionModal from 'src/pages/POS/BatchSelectionModal.vue';
+import QuickEntryBar from 'src/components/POS/QuickEntryBar.vue';
 
 export default defineComponent({
   name: 'ModernPos',
@@ -436,6 +452,7 @@ export default defineComponent({
     FloatingLabelCurrencyInput,
     ModernPOSSelectedItemTable,
     BatchSelectionModal,
+    QuickEntryBar,
   },
   props: {
     paidAmount: Money,
@@ -516,6 +533,10 @@ export default defineComponent({
       type: String as PropType<string | null | undefined>,
       default: undefined,
     },
+    enableQuickEntry: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: [
     'setExpandedBatchId',
@@ -543,6 +564,7 @@ export default defineComponent({
     'handlePaymentAction',
     'selectedRow',
     'batchSelected',
+    'quickEntryAdd',
   ],
   data() {
     return {
@@ -570,6 +592,9 @@ export default defineComponent({
       this.selectedItemField = field;
       // Bubble up to POS to allow keyboard shortcuts to target this row
       this.$emit('selectedRow', row);
+    },
+    resetQuickEntry() {
+      (this.$refs.quickEntryBar as { reset?: () => void } | undefined)?.reset?.();
     },
     getItem,
   },

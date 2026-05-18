@@ -15,6 +15,7 @@
         posProfile?.posUI === 'Classic' ||
         (!posProfile?.posUI && fyo.singles.POSSettings?.posUI === 'Classic')
       "
+      ref="posUI"
       :table-view="tableView"
       :profile="(posProfile as POSProfile)"
       :total-quantity="totalQuantity"
@@ -45,6 +46,7 @@
       :open-batch-selection-modal="openBatchSelectionModal"
       :selected-item-for-batch="selectedItemForBatch"
       :expanded-batch-id="expandedBatchId"
+      :enable-quick-entry="isQuickEntryEnabled"
       @set-expanded-batch-id="setExpandedBatchId"
       @add-item="addItem"
       @toggle-view="toggleView"
@@ -71,9 +73,11 @@
       @handle-payment-action="handlePaymentAction"
       @selected-row="setQuickQtySelectedRow"
       @batch-selected="handleBatchSelected"
+      @quick-entry-add="addItemViaQuickEntry"
     />
     <ModernPOS
       v-else
+      ref="posUI"
       :table-view="tableView"
       :profile="(posProfile as POSProfile)"
       :total-quantity="totalQuantity"
@@ -105,6 +109,7 @@
       :open-batch-selection-modal="openBatchSelectionModal"
       :selected-item-for-batch="selectedItemForBatch"
       :expanded-batch-id="expandedBatchId"
+      :enable-quick-entry="isQuickEntryEnabled"
       @set-expanded-batch-id="setExpandedBatchId"
       @add-item="addItem"
       @toggle-view="toggleView"
@@ -131,6 +136,7 @@
       @selected-row="setQuickQtySelectedRow"
       @handle-payment-action="handlePaymentAction"
       @batch-selected="handleBatchSelected"
+      @quick-entry-add="addItemViaQuickEntry"
     />
   </div>
 </template>
@@ -281,6 +287,9 @@ export default defineComponent({
       return !!fyo.singles.AccountingSettings?.enableDiscounting;
     },
     isPosShiftOpen: () => !!fyo.singles.POSSettings?.isShiftOpen,
+    isQuickEntryEnabled(): boolean {
+      return !!fyo.singles.AccountingSettings?.enableQuickEntry;
+    },
     itemVisibility() {
       return this.itemVisibilityValue;
     },
@@ -1104,6 +1113,77 @@ export default defineComponent({
         });
       }
     },
+    async addItemViaQuickEntry(
+      itemGroupCode: string,
+      quantity: number,
+      price: number
+    ) {
+      try {
+        await this.sinvDoc.runFormulas();
+        this.validateInvoice();
+
+        const matchingItems = (await this.fyo.db.getAll(
+          ModelNameEnum.Item,
+          {
+            fields: ['name', 'hsnCode', 'rate'],
+            filters: { itemGroup: ['like', itemGroupCode] },
+          }
+        )) as { name: string; hsnCode?: string; rate?: number }[];
+
+        if (!matchingItems.length) {
+          showToast({
+            type: 'error',
+            message: t`No item found for Item Group "${itemGroupCode}"`,
+            duration: 'short',
+          });
+          return;
+        }
+
+        const foundItem = matchingItems[0];
+        const itemName = foundItem.name;
+        const resolvedPrice =
+          price > 0 ? price : (foundItem.rate ?? 0);
+        const itemRate = this.fyo.pesa(resolvedPrice);
+
+        const existingItems =
+          this.sinvDoc.items?.filter(
+            (invoiceItem) =>
+              invoiceItem.item === itemName && !invoiceItem.isFreeItem
+          ) ?? [];
+
+        if (existingItems.length > 0) {
+          const currentQty = existingItems[0].quantity ?? 0;
+          await existingItems[0].set('quantity', currentQty + quantity);
+          await existingItems[0].set('rate', itemRate);
+          await this.sinvDoc.runFormulas();
+        } else {
+          await this.sinvDoc.append('items', {
+            item: itemName,
+            rate: itemRate,
+            quantity,
+            hsnCode: foundItem.hsnCode,
+            tax: '',
+          });
+          await this.sinvDoc.runFormulas();
+        }
+
+        showToast({
+          type: 'success',
+          message: t`${itemName} added to cart`,
+          duration: 'short',
+        });
+      } catch (error) {
+        showToast({
+          type: 'error',
+          message: t`${error as string}`,
+          duration: 'short',
+        });
+      } finally {
+        (
+          this.$refs.posUI as { resetQuickEntry?: () => void } | undefined
+        )?.resetQuickEntry?.();
+      }
+    },
     async handleBatchSelected(batchName: string) {
       if (!this.pendingBatchItem) {
         return;
@@ -1183,6 +1263,7 @@ export default defineComponent({
         const itemVisibility = await getItemVisibility(this.fyo);
 
         if (
+          !this.isQuickEntryEnabled &&
           this.sinvDoc.stockNotTransferred &&
           itemVisibility === 'Inventory Items'
         ) {

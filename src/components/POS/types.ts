@@ -48,7 +48,8 @@ export type PosEmits =
   | 'saveAndContinue'
   | 'handlePaymentAction'
   | 'setTransferClearanceDate'
-  | 'batchSelected'; 
+  | 'batchSelected'
+  | 'quickEntryAdd';
 
 export interface POSItem {
   id?: number;

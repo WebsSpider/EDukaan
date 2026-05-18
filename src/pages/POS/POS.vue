@@ -1152,8 +1152,9 @@ export default defineComponent({
           ) ?? [];
 
         if (existingItems.length > 0) {
-          const currentQty = existingItems[0].quantity ?? 0;
-          await existingItems[0].set('quantity', currentQty + quantity);
+          const newQty = (existingItems[0].quantity ?? 0) + quantity;
+          await existingItems[0].set('quantity', newQty);
+          await existingItems[0].set('transferQuantity', newQty);
           await existingItems[0].set('rate', itemRate);
           await this.sinvDoc.runFormulas();
         } else {
@@ -1161,6 +1162,7 @@ export default defineComponent({
             item: itemName,
             rate: itemRate,
             quantity,
+            transferQuantity: quantity,
             hsnCode: foundItem.hsnCode,
             tax: '',
           });

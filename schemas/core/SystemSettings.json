@@ -94,7 +94,7 @@
       "fieldname": "displayPrecision",
       "label": "Display Precision",
       "fieldtype": "Int",
-      "default": 2,
+      "default": 0,
       "required": true,
       "minvalue": 0,
       "maxvalue": 9,

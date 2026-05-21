@@ -1145,29 +1145,15 @@ export default defineComponent({
           price > 0 ? price : (foundItem.rate ?? 0);
         const itemRate = this.fyo.pesa(resolvedPrice);
 
-        const existingItems =
-          this.sinvDoc.items?.filter(
-            (invoiceItem) =>
-              invoiceItem.item === itemName && !invoiceItem.isFreeItem
-          ) ?? [];
-
-        if (existingItems.length > 0) {
-          const newQty = (existingItems[0].quantity ?? 0) + quantity;
-          await existingItems[0].set('quantity', newQty);
-          await existingItems[0].set('transferQuantity', newQty);
-          await existingItems[0].set('rate', itemRate);
-          await this.sinvDoc.runFormulas();
-        } else {
-          await this.sinvDoc.append('items', {
-            item: itemName,
-            rate: itemRate,
-            quantity,
-            transferQuantity: quantity,
-            hsnCode: foundItem.hsnCode,
-            tax: '',
-          });
-          await this.sinvDoc.runFormulas();
-        }
+        await this.sinvDoc.append('items', {
+          item: itemName,
+          rate: itemRate,
+          quantity,
+          transferQuantity: quantity,
+          hsnCode: foundItem.hsnCode,
+          tax: '',
+        });
+        await this.sinvDoc.runFormulas();
 
         showToast({
           type: 'success',

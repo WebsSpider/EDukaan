@@ -137,6 +137,7 @@ export class Main {
         return;
       }
 
+      this.mainWindow.setTitle(this.title);
       this.mainWindow.maximize();
       this.mainWindow.show();
     });

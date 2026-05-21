@@ -12,12 +12,7 @@
     :dir="languageDirection"
     :language="language"
   >
-    <WindowsTitleBar
-      v-if="platform === 'Windows'"
-      :db-path="dbPath"
-      :company-name="companyName"
-      :company-logo="loginCompanyLogo"
-    />
+    <WindowsTitleBar v-if="platform === 'Windows'" />
     <!-- Main Contents -->
     <Desk
       v-if="activeScreen === 'Desk'"

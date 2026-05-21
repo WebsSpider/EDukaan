@@ -15,9 +15,6 @@
     style="height: 28px"
   >
     <p class="ms-2 text-xs font-semibold tracking-wide">EDukan</p>
-    <p v-if="companyName && dbPath" class="mx-auto text-sm">
-      {{ companyName }} - {{ dbPath }}
-    </p>
     <div
       v-if="!isFullscreen"
       class="absolute window-no-drag flex h-full items-center right-0"
@@ -66,11 +63,6 @@
 <script>
 export default {
   name: 'WindowsTitleBar',
-  props: {
-    dbPath: String,
-    companyName: String,
-    companyLogo: String,
-  },
   data() {
     return {
       isMax: Boolean,
